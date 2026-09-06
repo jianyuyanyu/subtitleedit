@@ -24529,6 +24529,56 @@ public partial class MainViewModel :
         return _subtitleOriginal;
     }
 
+    internal void UpdateWaveformOriginalSubtitleCues(AudioVisualizer audioVisualizer)
+    {
+        if (!ShowColumnOriginalText || !Se.Settings.Waveform.ShowOriginalSubtitle || _subtitleOriginal == null)
+        {
+            audioVisualizer.SetOriginalSubtitleCues(null);
+            return;
+        }
+
+        if (IsEditOriginalMode)
+        {
+            var editedCues = new List<WaveformOriginalSubtitleCue>();
+            foreach (var row in Subtitles)
+            {
+                if (row.ReferenceParagraphId != null || !string.IsNullOrEmpty(row.OriginalText))
+                {
+                    editedCues.Add(new WaveformOriginalSubtitleCue(
+                        row.StartTime.TotalSeconds, row.EndTime.TotalSeconds, row.OriginalText));
+                }
+            }
+
+            audioVisualizer.SetOriginalSubtitleCues(editedCues);
+            return;
+        }
+
+        var rowsByReferenceId = new Dictionary<Guid, SubtitleLineViewModel>();
+        foreach (var row in Subtitles)
+        {
+            if (row.ReferenceParagraphId is { } id)
+            {
+                rowsByReferenceId[id] = row;
+            }
+        }
+
+        var cues = new List<WaveformOriginalSubtitleCue>(_subtitleOriginal.Paragraphs.Count);
+        foreach (var paragraph in _subtitleOriginal.Paragraphs)
+        {
+            var start = paragraph.StartTime.TotalSeconds;
+            var end = paragraph.EndTime.TotalSeconds;
+            var text = paragraph.Text;
+            if (paragraph.Id is { } id && rowsByReferenceId.TryGetValue(id, out var row))
+            {
+                text = row.OriginalText;
+            }
+
+            cues.Add(new WaveformOriginalSubtitleCue(start, end, text));
+        }
+
+        audioVisualizer.SetOriginalSubtitleCues(cues);
+    }
+
     /// <summary>
     /// Returns false if the user cancelled the save because some subtitles exceed the format's limits.
     /// </summary>
@@ -29590,6 +29640,8 @@ public partial class MainViewModel :
     // guard below skips the work while it is hidden, so its values can be stale here.
     partial void OnShowColumnOriginalTextChanged(bool value)
     {
+        _updateAudioVisualizer = true;
+
         if (value && SelectedSubtitle != null)
         {
             MakeSubtitleTextInfoOriginal(SelectedSubtitle.OriginalText, SelectedSubtitle);
@@ -30254,6 +30306,7 @@ public partial class MainViewModel :
 
                 if (_updateAudioVisualizer && av != null)
                 {
+                    UpdateWaveformOriginalSubtitleCues(av);
                     av.InvalidateVisual();
                     _updateAudioVisualizer = false;
                 }

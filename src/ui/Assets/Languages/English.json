@@ -2668,6 +2668,7 @@
     "cloneVoiceExtractFailed": "Could not extract audio for the selected line.",
     "toggleShotChange": "Toggle shot change",
     "resetWaveformZoomAndSpeed": "Reset waveform zoom & speed",
+    "showOriginalSubtitle": "Show original subtitle",
     "showOnlyWaveform": "Show only waveform",
     "showOnlySpectrogram": "Show only spectrogram",
     "showWaveformAndSpectrogram": "Show waveform and spectrogram",
