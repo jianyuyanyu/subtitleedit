@@ -285,6 +285,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _waveformSpectrogramCombinedWaveformHeight;
 
     [ObservableProperty] private bool _waveformShowToolbar;
+    [ObservableProperty] private bool _waveformShowOriginalSubtitle;
 
     [ObservableProperty] private bool _waveformFocusTextboxAfterInsertNew;
     [ObservableProperty] private string _waveformSpaceInfo;
@@ -953,6 +954,7 @@ public partial class SettingsViewModel : ObservableObject
         WaveformCenterVideoPosition = Se.Settings.Waveform.CenterVideoPosition;
         WaveformCenterVideoPositionAlsoWhenPaused = Se.Settings.Waveform.CenterVideoPositionAlsoWhenPaused;
         WaveformShowToolbar = Se.Settings.Waveform.ShowToolbar;
+        WaveformShowOriginalSubtitle = Se.Settings.Waveform.ShowOriginalSubtitle;
 
         if (Se.Settings.Waveform.WaveformDrawStyle == WaveformDrawStyle.Classic.ToString())
         {
@@ -1862,6 +1864,7 @@ public partial class SettingsViewModel : ObservableObject
         Se.Settings.Waveform.SpectrogramCombinedWaveformHeight = WaveformSpectrogramCombinedWaveformHeight;
 
         Se.Settings.Waveform.ShowToolbar = WaveformShowToolbar;
+        Se.Settings.Waveform.ShowOriginalSubtitle = WaveformShowOriginalSubtitle;
         Se.Settings.Waveform.ToolbarItems = _waveformToolbarItems;
 
         Se.Settings.Waveform.WaveformTextFontSize = WaveformTextFontSize;
