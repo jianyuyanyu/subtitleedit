@@ -3440,14 +3440,32 @@ public class AudioVisualizer : Control
     {
         var start = renderCtx.StartPositionSeconds;
         var end = RelativeXPositionToSecondsOptimized(renderCtx.Width, renderCtx.SampleRate, start, renderCtx.ZoomFactor);
+        var startIndex = FindFirstIndexAfterTime(_originalSubtitleCues, start, static cue => cue.EndSeconds);
+        var lastStart = -1d;
+        var count = 0;
 
-        for (var i = 0; i < _originalSubtitleCues.Count; i++)
+        for (var i = startIndex; i < _originalSubtitleCues.Count; i++)
         {
             var cue = _originalSubtitleCues[i];
-            if (cue.EndSeconds < start || cue.StartSeconds > end)
+            if (cue.StartSeconds > end)
+            {
+                break;
+            }
+
+            if (cue.EndSeconds < start)
             {
                 continue;
             }
+
+            var isTooShortOrDense = count > 200 &&
+                                    (cue.EndSeconds - cue.StartSeconds < 0.00001 || cue.StartSeconds - lastStart < 0.09);
+            if (isTooShortOrDense)
+            {
+                continue;
+            }
+
+            lastStart = cue.StartSeconds;
+            count++;
 
             var left = SecondsToXPositionOptimized(cue.StartSeconds - start, renderCtx.SampleRate, renderCtx.ZoomFactor);
             var right = SecondsToXPositionOptimized(cue.EndSeconds - start, renderCtx.SampleRate, renderCtx.ZoomFactor);
@@ -3466,6 +3484,11 @@ public class AudioVisualizer : Control
                 {
                     DrawParagraphText(context, cue.Text, left + 3, top + 14);
                 }
+            }
+
+            if (count >= 250)
+            {
+                break;
             }
         }
     }
@@ -4047,7 +4070,8 @@ public class AudioVisualizer : Control
         var maxTime = TimeCode.MaxTimeTotalMilliseconds;
 
         // 1. Use Binary Search to find the first potential subtitle in the time range O(log N)
-        var startIndex = FindFirstIndexAfterTime(subtitle, startThreshold);
+        var startIndex = FindFirstIndexAfterTime(subtitle, startThreshold,
+            static paragraph => paragraph.EndTime.TotalMilliseconds);
 
         var lastStartTime = -1d;
         var count = 0;
@@ -4107,15 +4131,15 @@ public class AudioVisualizer : Control
     }
 
     // Helper for Binary Search
-    private static int FindFirstIndexAfterTime(IReadOnlyList<SubtitleLineViewModel> subtitle, double timeMs)
+    private static int FindFirstIndexAfterTime<T>(IReadOnlyList<T> items, double time, Func<T, double> getEndTime)
     {
-        int low = 0, high = subtitle.Count - 1;
+        int low = 0, high = items.Count - 1;
         var result = 0;
 
         while (low <= high)
         {
             int mid = low + (high - low) / 2;
-            if (subtitle[mid].EndTime.TotalMilliseconds >= timeMs)
+            if (getEndTime(items[mid]) >= time)
             {
                 result = mid;
                 high = mid - 1;
