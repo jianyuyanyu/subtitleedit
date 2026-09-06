@@ -29740,6 +29740,11 @@ public partial class MainViewModel :
             // the edit box or dragged an end time in the waveform.
             _mpvPreviewDirty = true;
         }
+        else if (e.PropertyName is nameof(SubtitleLineViewModel.OriginalText))
+        {
+            // Original cues are snapshots, so rebuild them after the original text changes.
+            _updateAudioVisualizer = true;
+        }
         else if (e.PropertyName is nameof(SubtitleLineViewModel.Layer))
         {
             // The waveform buffer filters on Layer when layers are hidden from the waveform.
