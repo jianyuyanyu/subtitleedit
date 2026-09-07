@@ -1556,7 +1556,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                         var cp = GetColorAndPosition(part);
                         if (cp != null)
                         {
-                            if (!string.IsNullOrWhiteSpace(sb.ToString()) && cp.Y > 0 && y >= 0 && cp.Y > y && !sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
+                            if (!sb.IsNullOrWhiteSpace() && cp.Y > 0 && y >= 0 && cp.Y > y && !sb.EndsWith(Environment.NewLine))
                             {
                                 sb.AppendLine();
                             }
@@ -1669,7 +1669,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                                     break;
                                 case "9440":
                                 case "94e0":
-                                    if (!sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
+                                    if (!sb.EndsWith(Environment.NewLine))
                                     {
                                         sb.AppendLine();
                                     }
@@ -1724,7 +1724,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                                         // Unrecognized Preamble Address Code: it repositions the
                                         // cursor onto a new row, so emit a line break instead of
                                         // decoding its bytes as stray letters (e.g. "n"/"N"). (#9803)
-                                        if (sb.Length > 0 && !sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
+                                        if (sb.Length > 0 && !sb.EndsWith(Environment.NewLine))
                                         {
                                             sb.AppendLine();
                                         }

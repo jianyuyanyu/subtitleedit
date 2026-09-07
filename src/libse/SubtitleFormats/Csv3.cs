@@ -184,7 +184,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                     {
                         isBreak = false;
                     }
-                    else if (i == 0 || i == csv.Length - 1 || sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
+                    else if (i == 0 || i == csv.Length - 1 || sb.EndsWith(Environment.NewLine))
                     {
                         sb.Append('"');
                     }
