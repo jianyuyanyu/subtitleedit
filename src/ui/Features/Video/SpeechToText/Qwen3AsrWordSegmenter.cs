@@ -89,7 +89,7 @@ public static class Qwen3AsrWordSegmenter
             if (text.Length > 0 && !isPunctuationOnly)
             {
                 var gap = word.StartSeconds - endTime;
-                var endsClause = EndsWith(text, ClauseTerminators) || EndsWith(text, SentenceTerminators);
+                var endsClause = text.EndsWithAny(ClauseTerminators, ClosingMarks) || text.EndsWithAny(SentenceTerminators, ClosingMarks);
                 var maxChars = ContainsCjk(text) ? maxCharsCjk : maxCharsLatin;
                 var space = NeedsSpace(text[text.Length - 1], token[0]) ? 1 : 0;
                 var tooLong = text.Length + space + token.Length > maxChars;
@@ -157,17 +157,6 @@ public static class Qwen3AsrWordSegmenter
         }
 
         return i >= 0 && SentenceTerminators.IndexOf(token[i]) >= 0;
-    }
-
-    private static bool EndsWith(StringBuilder text, string chars)
-    {
-        var i = text.Length - 1;
-        while (i >= 0 && ClosingMarks.IndexOf(text[i]) >= 0)
-        {
-            i--;
-        }
-
-        return i >= 0 && chars.IndexOf(text[i]) >= 0;
     }
 
     private static bool IsPunctuationOnly(string token)

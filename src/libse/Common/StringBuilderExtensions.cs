@@ -37,6 +37,44 @@ namespace Nikse.SubtitleEdit.Core.Common
             return sb.Length > 0 && sb[sb.Length - 1] == c;
         }
 
+        /// <summary>
+        /// Ordinal suffix test that does not copy the whole builder - "sb.ToString().EndsWith(value)"
+        /// allocates the accumulated text on every call.
+        /// </summary>
+        public static bool EndsWith(this StringBuilder sb, string value)
+        {
+            if (sb.Length < value.Length)
+            {
+                return false;
+            }
+
+            var offset = sb.Length - value.Length;
+            for (var i = 0; i < value.Length; i++)
+            {
+                if (sb[offset + i] != value[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// True when the builder ends with one of <paramref name="chars"/>, ignoring any
+        /// trailing characters from <paramref name="skipTrailing"/> (closing quotes/brackets).
+        /// </summary>
+        public static bool EndsWithAny(this StringBuilder sb, string chars, string skipTrailing = "")
+        {
+            var i = sb.Length - 1;
+            while (i >= 0 && skipTrailing.IndexOf(sb[i]) >= 0)
+            {
+                i--;
+            }
+
+            return i >= 0 && chars.IndexOf(sb[i]) >= 0;
+        }
+
         // Same count as scanning sb.ToString() without materializing the whole
         // accumulated text into a fresh string.
         public static int CountChar(this StringBuilder sb, char c)
