@@ -171,6 +171,10 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
         [Description("Offset time (hh:mm:ss:ms)")]
         public string? Offset { get; init; }
 
+        [CommandOption("--output-filename-append|--outputfilenameappend")]
+        [Description("Text appended to the output file name stem, e.g. \"_fixed\" turns movie.ts into movie_fixed.srt (ignored with --output-filename)")]
+        public string? OutputFilenameAppend { get; init; }
+
         [CommandOption("--output-filename|--outputfilename")]
         [Description("Output file name (for single file only)")]
         public string? OutputFilename { get; init; }
@@ -280,6 +284,10 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
         [CommandOption("--left-right-margin|--leftrightmargin")]
         [Description("Image output: horizontal screen-edge margin in pixels (default: 5% of width)")]
         public int? LeftRightMargin { get; init; }
+
+        [CommandOption("--override-position|--overrideposition")]
+        [Description("Image → image output (DVB-sub/PGS/VobSub pass-through): ignore the source bitmap position and place it by --alignment and margins: x | y | xy")]
+        public string? OverridePosition { get; init; }
 
         [CommandOption("--full-frame|--fullframe")]
         [Description("Image output: draw each subtitle on a frame-sized image (place at 0,0 in an editing timeline). Only fcpimage and bluraysup use it")]
@@ -729,6 +737,7 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
                 InputFolder = settings.InputFolder,
                 OutputFolder = settings.OutputFolder,
                 OutputFilename = settings.OutputFilename,
+                OutputFilenameAppend = settings.OutputFilenameAppend,
                 Encoding = settings.Encoding,
                 InputEncodingFallback = settings.InputEncodingFallback,
                 Fps = settings.Fps,
@@ -1192,6 +1201,27 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
         if (settings.LeftRightMargin.HasValue)
         {
             style.LeftRightMargin = settings.LeftRightMargin.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.OverridePosition))
+        {
+            switch (settings.OverridePosition.Trim().ToLowerInvariant())
+            {
+                case "x":
+                    style.OverridePositionX = true;
+                    break;
+                case "y":
+                    style.OverridePositionY = true;
+                    break;
+                case "xy":
+                case "yx":
+                case "both":
+                    style.OverridePositionX = true;
+                    style.OverridePositionY = true;
+                    break;
+                default:
+                    return $"Unknown value '{settings.OverridePosition}' for --override-position. Use: x, y, or xy.";
+            }
         }
 
         if (settings.FullFrame)
