@@ -4139,6 +4139,8 @@ public partial class OcrViewModel : ObservableObject
                         return;
                     }
 
+                    text = await RetryTesseractIfNeededAsync(tesseractOcr, bitmap, i, text, language, tessDataFolder, engineMode, cancellationToken);
+
                     processedCount++;
                     if (!string.IsNullOrWhiteSpace(text))
                     {
@@ -4185,6 +4187,85 @@ public partial class OcrViewModel : ObservableObject
                 PauseOcr();
             }
         });
+    }
+
+    /// <summary>
+    /// SE4's Tesseract retry (VobSubOcr.TesseractResizeAndRetry): when the first pass is blank or
+    /// leaves unknown words, run again on the image stretched 3x/2x with automatic layout, and if
+    /// that is still blank on 4x/2x as a single line. The retry is kept only when the dictionary
+    /// rates it better and it does not invent a digit (discussion #12929: "Yeanh" → "Yeah",
+    /// "houir" → "hour", a blank "I..." line recovered; "18 months" must not become "718 months").
+    /// </summary>
+    private async Task<string> RetryTesseractIfNeededAsync(TesseractOcr tesseractOcr, SKBitmap bitmap, int index, string text, string language, string tessDataFolder, int engineMode, CancellationToken cancellationToken)
+    {
+        var blank = string.IsNullOrWhiteSpace(text);
+        var score = blank ? null : CountTesseractWords(index, text);
+        if (!blank && (score == null || (score.Value.unknown == 0 && score.Value.correct > 0)))
+        {
+            return text;
+        }
+
+        var retry = await tesseractOcr.Ocr(bitmap, language, tessDataFolder, cancellationToken, engineMode, TesseractOcr.PsmAuto, 3, 2);
+        if (string.IsNullOrWhiteSpace(retry))
+        {
+            retry = await tesseractOcr.Ocr(bitmap, language, tessDataFolder, cancellationToken, engineMode, TesseractOcr.PsmSingleLine, 4, 2);
+        }
+
+        if (string.IsNullOrWhiteSpace(retry))
+        {
+            return text;
+        }
+
+        if (blank)
+        {
+            return retry;
+        }
+
+        var retryScore = CountTesseractWords(index, retry);
+        if (retryScore != null &&
+            retryScore.Value.unknown < score!.Value.unknown &&
+            retryScore.Value.correct >= score.Value.correct &&
+            !TesseractOcr.RetryIntroducesDigit(text, retry))
+        {
+            return retry;
+        }
+
+        return text;
+    }
+
+    /// <summary>
+    /// Dictionary verdict on one OCR pass: how many words the fix engine still flags as unknown
+    /// and how many it accepts. Null when no dictionary is in use, in which case nothing can be
+    /// compared and the first pass stands.
+    /// </summary>
+    private (int unknown, int correct)? CountTesseractWords(int index, string text)
+    {
+        if (SelectedDictionary == null || SelectedDictionary.Name == GetDictionaryNameNone() || !_ocrFixEngine.IsLoaded() || !DoFixOcrErrors)
+        {
+            return null;
+        }
+
+        var result = _ocrFixEngine.FixOcrErrors(index, text, DoTryToGuessUnknownWords);
+        var unknown = 0;
+        var correct = 0;
+        foreach (var word in result.Words)
+        {
+            if (word.LinePartType != OcrFixLinePartType.Word)
+            {
+                continue;
+            }
+
+            if (word.IsSpellCheckedOk == false)
+            {
+                unknown++;
+            }
+            else if (word.IsSpellCheckedOk == true)
+            {
+                correct++;
+            }
+        }
+
+        return (unknown, correct);
     }
 
     private async Task ShowTesseractErrorAsync(string error)

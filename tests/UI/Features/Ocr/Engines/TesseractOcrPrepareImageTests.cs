@@ -1,0 +1,57 @@
+using Nikse.SubtitleEdit.Features.Ocr;
+using SkiaSharp;
+
+namespace UITests.Features.Ocr.Engines;
+
+/// <summary>
+/// Discussion #12929: SE5 fed Tesseract the binarized subtitle with the glyphs touching the image
+/// edge and misread "in" as "In", "to" as "(o", "What" as "\What". SE4 padded the image by 10 px
+/// first; the retry passes stretch it and must not invent digits.
+/// </summary>
+public class TesseractOcrPrepareImageTests
+{
+    private static SKBitmap MakeSubtitle(int width, int height)
+    {
+        // Grey text pixel (Blu-ray subtitles are often Y=140 grey) in the top-left corner, rest transparent.
+        var bmp = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        bmp.Erase(SKColors.Transparent);
+        bmp.SetPixel(0, 0, new SKColor(144, 144, 144, 255));
+        return bmp;
+    }
+
+    [Fact]
+    public void PrepareImage_AddsWhiteMarginAroundBlackText()
+    {
+        using var bmp = MakeSubtitle(20, 10);
+
+        using var prepared = TesseractOcr.PrepareImage(bmp);
+
+        Assert.Equal(20 + 2 * TesseractOcr.Margin, prepared.Width);
+        Assert.Equal(10 + 2 * TesseractOcr.Margin, prepared.Height);
+        Assert.Equal(SKColors.White, prepared.GetPixel(0, 0));
+        Assert.Equal(SKColors.White, prepared.GetPixel(prepared.Width - 1, prepared.Height - 1));
+        Assert.Equal(SKColors.Black, prepared.GetPixel(TesseractOcr.Margin, TesseractOcr.Margin));
+    }
+
+    [Fact]
+    public void PrepareImage_StretchesAfterPadding()
+    {
+        using var bmp = MakeSubtitle(20, 10);
+
+        using var prepared = TesseractOcr.PrepareImage(bmp, 3, 2);
+
+        Assert.Equal((20 + 2 * TesseractOcr.Margin) * 3, prepared.Width);
+        Assert.Equal((10 + 2 * TesseractOcr.Margin) * 2, prepared.Height);
+        Assert.Equal(SKColors.White, prepared.GetPixel(0, 0));
+    }
+
+    [Theory]
+    [InlineData("In the 18 months", "In the 718 months", true)]
+    [InlineData("-700 miles an houir.", "-700 miles an hour.", false)]
+    [InlineData("Onh, great.", "Oh, great.", false)]
+    [InlineData("", "I...", false)]
+    public void RetryIntroducesDigit(string firstPass, string retry, bool expected)
+    {
+        Assert.Equal(expected, TesseractOcr.RetryIntroducesDigit(firstPass, retry));
+    }
+}
