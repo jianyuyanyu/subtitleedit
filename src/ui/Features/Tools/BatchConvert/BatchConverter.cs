@@ -538,13 +538,15 @@ public class BatchConverter : IBatchConverter, IFixCallbacks
             }
         }
 
-        foreach (var i in tsParser.TeletextSubtitlesLookup.Keys)
+        // One PID can carry several teletext subtitle pages; emit each page as its own result.
+        foreach (var pages in tsParser.TeletextSubtitlesLookup.Values)
         {
-            var pid = tsParser.TeletextSubtitlesLookup[i];
-            var paragraphs = pid.Values.First();
-            if (paragraphs.Count > 0)
+            foreach (var paragraphs in pages.Values)
             {
-                result.Add(new TransportStreamResult { IsImage = false, Subtitle = new Subtitle(paragraphs) });
+                if (paragraphs.Count > 0)
+                {
+                    result.Add(new TransportStreamResult { IsImage = false, Subtitle = new Subtitle(paragraphs) });
+                }
             }
         }
 
