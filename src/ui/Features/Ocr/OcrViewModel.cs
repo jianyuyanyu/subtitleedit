@@ -4222,12 +4222,31 @@ public partial class OcrViewModel : ObservableObject
         }
 
         var retryScore = CountTesseractWords(index, retry);
-        if (retryScore != null &&
-            retryScore.Value.unknown < score!.Value.unknown &&
+        if (retryScore == null)
+        {
+            return text;
+        }
+
+        if (retryScore.Value.unknown < score!.Value.unknown &&
             retryScore.Value.correct >= score.Value.correct &&
             !TesseractOcr.RetryIntroducesDigit(text, retry))
         {
             return retry;
+        }
+
+        // The retry as a whole was worse or suspicious - still take its reading of the words the
+        // first pass got wrong, if it lines up word for word ("diedq," → "died," while the "18"
+        // the retry read as "718" stays).
+        var merged = TesseractOcr.MergeRetryUnknownWords(text, retry, score.Value.unknownWords);
+        if (merged != null)
+        {
+            var mergedScore = CountTesseractWords(index, merged);
+            if (mergedScore != null &&
+                mergedScore.Value.unknown < score.Value.unknown &&
+                mergedScore.Value.correct >= score.Value.correct)
+            {
+                return merged;
+            }
         }
 
         return text;
@@ -4238,7 +4257,7 @@ public partial class OcrViewModel : ObservableObject
     /// and how many it accepts. Null when no dictionary is in use, in which case nothing can be
     /// compared and the first pass stands.
     /// </summary>
-    private (int unknown, int correct)? CountTesseractWords(int index, string text)
+    private (int unknown, int correct, List<string> unknownWords)? CountTesseractWords(int index, string text)
     {
         if (SelectedDictionary == null || SelectedDictionary.Name == GetDictionaryNameNone() || !_ocrFixEngine.IsLoaded() || !DoFixOcrErrors)
         {
@@ -4246,7 +4265,7 @@ public partial class OcrViewModel : ObservableObject
         }
 
         var result = _ocrFixEngine.FixOcrErrors(index, text, DoTryToGuessUnknownWords);
-        var unknown = 0;
+        var unknownWords = new List<string>();
         var correct = 0;
         foreach (var word in result.Words)
         {
@@ -4257,7 +4276,7 @@ public partial class OcrViewModel : ObservableObject
 
             if (word.IsSpellCheckedOk == false)
             {
-                unknown++;
+                unknownWords.Add(word.Word);
             }
             else if (word.IsSpellCheckedOk == true)
             {
@@ -4265,7 +4284,7 @@ public partial class OcrViewModel : ObservableObject
             }
         }
 
-        return (unknown, correct);
+        return (unknownWords.Count, correct, unknownWords);
     }
 
     private async Task ShowTesseractErrorAsync(string error)

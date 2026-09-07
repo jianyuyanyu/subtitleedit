@@ -3,6 +3,7 @@ using Nikse.SubtitleEdit.Logic;
 using Nikse.SubtitleEdit.Logic.Config;
 using SkiaSharp;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
@@ -106,6 +107,67 @@ public class TesseractOcr
         foreach (var c in retry)
         {
             if (char.IsDigit(c) && !firstPass.Contains(c))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex WhitespaceSplit = new(@"(\s+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Word-wise merge of a retry pass into the first pass: only tokens the dictionary flagged as
+    /// unknown in the first pass are taken from the retry, every other token is kept. The stretched
+    /// retry tends to fix the unknown word but damage a known one ("diedq," → "died," but
+    /// "18 months" → "718 months"), so taking it whole is rejected and taking it word-wise is not.
+    /// Null when the two passes do not line up token for token or no unknown word changed.
+    /// </summary>
+    internal static string? MergeRetryUnknownWords(string firstPass, string retry, IReadOnlyCollection<string> unknownWords)
+    {
+        if (unknownWords.Count == 0)
+        {
+            return null;
+        }
+
+        var first = WhitespaceSplit.Split(firstPass);
+        var second = WhitespaceSplit.Split(retry);
+        if (first.Length != second.Length)
+        {
+            return null;
+        }
+
+        var changed = false;
+        for (var i = 0; i < first.Length; i++)
+        {
+            if (first[i] == second[i])
+            {
+                continue;
+            }
+
+            if (i % 2 == 1)
+            {
+                return null; // whitespace differs - the passes do not line up
+            }
+
+            if (!ContainsUnknownWord(first[i], unknownWords))
+            {
+                continue; // a word the dictionary accepted: keep the first pass' reading
+            }
+
+            first[i] = second[i];
+            changed = true;
+        }
+
+        return changed ? string.Concat(first) : null;
+    }
+
+    private static bool ContainsUnknownWord(string token, IReadOnlyCollection<string> unknownWords)
+    {
+        foreach (var unknown in unknownWords)
+        {
+            if (unknown.Length > 0 && token.Contains(unknown, StringComparison.Ordinal))
             {
                 return true;
             }

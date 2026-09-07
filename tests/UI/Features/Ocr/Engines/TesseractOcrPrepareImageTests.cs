@@ -45,6 +45,44 @@ public class TesseractOcrPrepareImageTests
         Assert.Equal(SKColors.White, prepared.GetPixel(0, 0));
     }
 
+    [Fact]
+    public void MergeRetryUnknownWords_TakesOnlyTheUnknownWordFromTheRetry()
+    {
+        var merged = TesseractOcr.MergeRetryUnknownWords(
+            "In the 18 months since my mother diedq,",
+            "In the 718 months since my mother died,",
+            new[] { "diedq" });
+
+        Assert.Equal("In the 18 months since my mother died,", merged);
+    }
+
+    [Fact]
+    public void MergeRetryUnknownWords_KeepsKnownWordsFromTheFirstPass()
+    {
+        var merged = TesseractOcr.MergeRetryUnknownWords("It was lime to stop", "It was time to stap", new[] { "lime" });
+
+        Assert.Equal("It was time to stop", merged);
+    }
+
+    [Fact]
+    public void MergeRetryUnknownWords_KeepsLineBreaks()
+    {
+        var merged = TesseractOcr.MergeRetryUnknownWords("-Yeanh.\n-You've got nothing.", "-Yeah.\n-You've got nothing.", new[] { "Yeanh" });
+
+        Assert.Equal("-Yeah.\n-You've got nothing.", merged);
+    }
+
+    [Theory]
+    [InlineData("In the 18 months since my mother diedq,", "In the 718 months since mother died,", "diedq")] // token counts differ
+    [InlineData("In the 18 months since my mother died,", "In the 718 months since my mother died,", "")] // nothing unknown
+    [InlineData("It was lime to stop", "It was lime to stop", "lime")] // retry identical
+    public void MergeRetryUnknownWords_RefusesWhenPassesDoNotLineUp(string firstPass, string retry, string unknown)
+    {
+        var unknownWords = unknown.Length == 0 ? System.Array.Empty<string>() : new[] { unknown };
+
+        Assert.Null(TesseractOcr.MergeRetryUnknownWords(firstPass, retry, unknownWords));
+    }
+
     [Theory]
     [InlineData("In the 18 months", "In the 718 months", true)]
     [InlineData("-700 miles an houir.", "-700 miles an hour.", false)]
