@@ -1228,52 +1228,22 @@ public partial class SpeechToTextViewModel : ObservableObject
             // still get a result.
             var jsonText = JsonRepair.FixCommaDecimalSeparators(JsonRepair.EscapeControlCharsInStrings(rawJson));
             var jsonDoc = JsonDocument.Parse(jsonText);
-            var words = jsonDoc.RootElement.GetProperty("words");
-
-            var subtitle = new Subtitle();
-            var currentText = new StringBuilder();
-            var startTime = 0.0;
-            var endTime = 0.0;
-            var first = true;
-
-            foreach (var word in words.EnumerateArray())
+            var words = new List<Qwen3AsrWord>();
+            foreach (var word in jsonDoc.RootElement.GetProperty("words").EnumerateArray())
             {
-                var text = word.GetProperty("word").GetString() ?? string.Empty;
-                var start = word.GetProperty("start").GetDouble();
-                var end = word.GetProperty("end").GetDouble();
-
-                if (first)
-                {
-                    startTime = start;
-                    first = false;
-                }
-
-                var newParagraph = false;
-                if (currentText.Length > 0 && (start - endTime > 0.5 || currentText.Length + text.Length > 80))
-                {
-                    newParagraph = true;
-                }
-
-                if (newParagraph)
-                {
-                    subtitle.Paragraphs.Add(new Paragraph(currentText.ToString().Trim(), startTime * 1000.0, endTime * 1000.0));
-                    currentText.Clear();
-                    startTime = start;
-                }
-
-                if (currentText.Length > 0)
-                {
-                    currentText.Append(' ');
-                }
-
-                currentText.Append(text);
-                endTime = end;
+                words.Add(new Qwen3AsrWord(
+                    word.GetProperty("word").GetString() ?? string.Empty,
+                    word.GetProperty("start").GetDouble(),
+                    word.GetProperty("end").GetDouble()));
             }
 
-            if (currentText.Length > 0)
-            {
-                subtitle.Paragraphs.Add(new Paragraph(currentText.ToString().Trim(), startTime * 1000.0, endTime * 1000.0));
-            }
+            // Sentence-aware cue building (issue #14631): the old loop split only on a 0.5 s
+            // gap or 80 chars and joined every token with a space, which turned Chinese
+            // output into one space-riddled blob cut mid-sentence.
+            var subtitle = Qwen3AsrWordSegmenter.BuildSubtitle(
+                words,
+                Configuration.Settings.General.SubtitleLineMaximumLength * 2,
+                Qwen3AsrWordSegmenter.DefaultMaxCharsCjk);
 
             FixNegativeDuration(subtitle);
             var postProcessedSubtitle = PostProcess(subtitle);
