@@ -25,6 +25,21 @@ public class OcrFixEngineSplitLineTests
         Assert.DoesNotContain(result.Words, w => w.Word.Length == 0);
     }
 
+    // Tesseract emits the typographic apostrophe (U+2019) in "didn’t"; the splitter must keep the
+    // contraction as one word, or "didn" gets spell-checked on its own and flagged as unknown.
+    [Theory]
+    [InlineData("it didn’t take much", "didn’t")]
+    [InlineData("it didn't take much", "didn't")]
+    [InlineData("someone’s son", "someone’s")]
+    public void SplitLine_Apostrophe_KeepsContractionAsOneWord(string line, string expectedWord)
+    {
+        var result = OcrFixEngine.SplitLine(line, 0);
+
+        var words = result.Words.Where(w => w.LinePartType == OcrFixLinePartType.Word).Select(w => w.Word).ToList();
+        Assert.Contains(expectedWord, words);
+        Assert.Equal(line, string.Concat(result.Words.Select(w => w.Word)));
+    }
+
     [Fact]
     public void SplitLine_ValidTag_IsParsedAsTag()
     {
