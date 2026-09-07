@@ -1,4 +1,4 @@
-using Nikse.SubtitleEdit.Features.Video.TextToSpeech;
+﻿using Nikse.SubtitleEdit.Features.Video.TextToSpeech;
 using Nikse.SubtitleEdit.Features.Video.TextToSpeech.Engines;
 using Nikse.SubtitleEdit.Features.Video.TextToSpeech.Voices;
 
@@ -10,9 +10,11 @@ namespace UITests.Features.Video.TextToSpeech.Engines;
 /// voice for a line is the cut clip itself.
 /// </summary>
 /// <remarks>
-/// The one engine-specific rule is Fish's: S2 Pro refuses a reference without a transcript, so
-/// a clip with no .txt sidecar must not become a voice at all - the line falls back to an
-/// ordinary voice instead of the whole run failing on it.
+/// The engine-specific rules are about the transcript. Fish S2 Pro takes a blank placeholder
+/// when there is none; Higgs and IndexTTS clone from the audio alone; FireRedTTS3 cannot - its
+/// prompt pairs the reference audio with its transcript and without one the model returns
+/// noise (#14480) - so a clip with no usable .txt sidecar must not become a FireRed voice at
+/// all, and the line falls back to an ordinary voice instead of the run producing garbage.
 /// </remarks>
 public class AudioCppPerLineCloneTests
 {
@@ -58,7 +60,23 @@ public class AudioCppPerLineCloneTests
 
         Assert.NotNull(PerLineVoiceClone.MakeVoiceForClip(new HiggsTtsAudioCpp(), clip));
         Assert.NotNull(PerLineVoiceClone.MakeVoiceForClip(new IndexTts25AudioCpp(), clip));
-        Assert.NotNull(PerLineVoiceClone.MakeVoiceForClip(new FireRedTts3AudioCpp(), clip));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    // The shared voice pack's Wikimedia attribution blurb is a sidecar, not a transcript.
+    [InlineData("Wikimedia Commons, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Speech.ogg")]
+    public void FireRedWithoutAUsableTranscriptDoesNotCloneTheLine(string? transcript)
+    {
+        // With no text to pair the reference audio with, FireRedTTS3 produced a second or two
+        // of noise on every seed (#14480) - so the clip is refused and the line falls back to
+        // an ordinary voice.
+        using var clips = new TempFolder();
+        var clip = clips.WriteClip("line-0010", transcript);
+
+        Assert.Null(PerLineVoiceClone.MakeVoiceForClip(new FireRedTts3AudioCpp(), clip));
     }
 
     [Theory]

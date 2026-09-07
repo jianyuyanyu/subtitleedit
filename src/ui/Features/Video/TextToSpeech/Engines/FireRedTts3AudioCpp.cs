@@ -30,9 +30,20 @@ namespace Nikse.SubtitleEdit.Features.Video.TextToSpeech.Engines;
 /// is also what makes per-line cloning ("Clone from video") free here. Unlike Higgs, the model
 /// does NOT detect the language of the input text: the request carries an explicit language
 /// tag (<see cref="FireRedTts3Languages"/>) and audio.cpp's own default is Chinese, so the
-/// language combo is mandatory here and English is pre-selected. A <c>.txt</c> sidecar next to
+/// language combo is mandatory here and English is pre-selected. The <c>.txt</c> sidecar next to
 /// the reference WAV (the transcript convention the cloning engines share) is passed as
-/// <c>reference_text</c>; it improves clone fidelity but is optional.
+/// <c>reference_text</c> and is REQUIRED: the model is a pure in-context continuation - the
+/// prompt is <c>&lt;|Lang|&gt;&lt;|sot|&gt;{reference_text}{text}&lt;|eot|&gt;</c> followed by the
+/// reference audio - so without the transcript nothing pairs the reference audio with any text
+/// and the output is a second or two of noise on every seed (#14480). That is why a per-line
+/// clip with no transcript (no original-language subtitle loaded) is not cloned by this engine.
+///
+/// Cross-lingual cloning (reference in one language, text in another) is the model's weak spot:
+/// the single language tag covers both the reference transcript and the text, and measured
+/// against an English reference the tag that reads best depends on the target language
+/// (Italian and Spanish want the reference's tag, French and German the target's). The tag
+/// therefore follows the text as documented, and the docs steer cross-language dubbing to the
+/// engines that handle it.
 ///
 /// Licence note: the audio.cpp binaries and the FireRedTTS3 weights are both Apache-2.0, so
 /// there is no first-run licence gate — unlike Higgs and Fish on the same runtime.
@@ -320,8 +331,22 @@ public class FireRedTts3AudioCpp : ITtsEngine, IPerLineCloneEngine
     /// so the voice simply points at the cut clip - nothing is staged into this engine's own
     /// folders. audio.cpp resamples the reference itself, so the 24 kHz clip is used as cut.
     /// </summary>
-    public Voice? MakePerLineCloneVoice(string clipFileName, string voiceName) =>
-        new Voice(new IndexTtsVoice(voiceName, clipFileName));
+    public Voice? MakePerLineCloneVoice(string clipFileName, string voiceName)
+    {
+        // No usable transcript means no cloning for this line: the prompt pairs the reference
+        // audio with its transcript, and with that missing the model returns noise rather than
+        // the line (see the class remarks). Null makes the caller fall back to an ordinary
+        // voice for the line, which at least speaks it.
+        if (string.IsNullOrWhiteSpace(Qwen3TtsCrispAsr.TryReadUsableTranscript(clipFileName)))
+        {
+            Se.WriteToolsLog(
+                $"FireRedTTS3 (audio.cpp): no usable transcript beside '{clipFileName}' - not cloning this line "
+                + "(load the original-language subtitle so the clips get their transcripts)");
+            return null;
+        }
+
+        return new Voice(new IndexTtsVoice(voiceName, clipFileName));
+    }
 
     /// <summary>The clip's own path, which is exactly what the voice carries.</summary>
     public string? GetPerLineReferenceClip(Voice voice) =>
@@ -374,14 +399,21 @@ public class FireRedTts3AudioCpp : ITtsEngine, IPerLineCloneEngine
             ["language"] = languageTag,
         };
 
-        // The transcript of the reference WAV, when the shared .txt sidecar convention has
-        // one. Optional — FireRedTTS3 clones from the audio alone — but a transcript improves
-        // clone fidelity, so pass it when it is there.
-        var referenceText = ChatterboxTtsCpp.TryReadReferenceTranscript(indexVoice.FilePath);
-        if (!string.IsNullOrEmpty(referenceText))
+        // The transcript of the reference WAV from the shared .txt sidecar convention. Not
+        // optional here: the model continues the reference in-context and needs its text to
+        // pair with the audio - without it every seed produced one or two seconds of noise
+        // (#14480). Failing with a message beats generating that.
+        var referenceText = Qwen3TtsCrispAsr.TryReadUsableTranscript(indexVoice.FilePath);
+        if (string.IsNullOrWhiteSpace(referenceText))
         {
-            options["reference_text"] = referenceText;
+            throw new InvalidOperationException(
+                $"FireRedTTS3 (audio.cpp) needs a transcript of the reference voice '{indexVoice}' "
+                + "(a .txt file with the same name next to the WAV). Without it the model produces "
+                + "noise instead of speech. Pick the voice again to be asked for the transcript, "
+                + "or add the .txt file by hand.");
         }
+
+        options["reference_text"] = referenceText;
 
         // The clone ends the way the reference ends (see CloneReferenceTail), so condition on a
         // copy whose tail is trimmed, faded and padded with silence. Falls back to the file as is.
@@ -788,8 +820,9 @@ public class FireRedTts3AudioCpp : ITtsEngine, IPerLineCloneEngine
 
     /// <summary>
     /// Import with the reference transcript — the overload <see cref="VoiceCloneImporter"/>
-    /// routes to. FireRedTTS3 clones from the audio alone, but a transcript improves clone fidelity,
-    /// so it is kept as the .txt sidecar Speak passes as reference_text.
+    /// routes to. FireRedTTS3 cannot clone without the transcript (see the class remarks), so it
+    /// is kept as the .txt sidecar Speak passes as reference_text; a voice imported without one
+    /// is asked for it when picked.
     /// </summary>
     public bool ImportVoice(string fileName, string transcript)
     {
