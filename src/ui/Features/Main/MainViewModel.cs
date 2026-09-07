@@ -2894,6 +2894,25 @@ public partial class MainViewModel :
         _shortcutManager.ClearKeys();
     }
 
+    /// <summary>
+    /// Re-opens the original remembered with a recent file (start-up and Reopen). The pair is one
+    /// load to the user, so the undo history starts over once both are in: with the original opened
+    /// as a step after "Subtitle loaded", a freshly opened pair had an undo step waiting, and the
+    /// first Ctrl+Z took the original away (#14634).
+    /// </summary>
+    private async Task RestoreRememberedOriginal(int selectedIndex, string? originalFileName, string subtitleFileName)
+    {
+        if (string.IsNullOrEmpty(originalFileName) || !File.Exists(originalFileName))
+        {
+            return;
+        }
+
+        await SubtitleOpenOriginal(selectedIndex, originalFileName);
+
+        _undoRedoManager.Reset();
+        _undoRedoManager.Do(MakeUndoRedoObject(string.Format(Se.Language.General.SubtitleLoadedX, subtitleFileName)));
+    }
+
     private async Task<bool> SubtitleOpenOriginal(int selectedIndex, string fileName)
     {
         // Replacing an editable original discards it - settle unsaved edits first (#13594).
@@ -2902,6 +2921,11 @@ public partial class MainViewModel :
             _shortcutManager.ClearKeys();
             return false;
         }
+
+        // The open is recorded as its own undo step (see ImportOriginalSubtitle); whatever the
+        // user edited in the last few hundred milliseconds must be its own step before that,
+        // or the first Ctrl+Z would take the edit away together with the original (#14634).
+        _undoRedoManager.CheckForChanges(null);
 
         var subtitle = Subtitle.Parse(fileName);
         if (subtitle == null)
@@ -3034,6 +3058,11 @@ public partial class MainViewModel :
         AutoFitColumns();
         SelectAndScrollToRow(selectedIndex);
         AddToRecentFiles(true);
+
+        // A named step rather than a "Changes detected" tick, so the history reads right and the
+        // snapshot carries the original's whole state (column, read-only, display-only rows) -
+        // which undo and redo then restore as a unit (#14634).
+        _undoRedoManager.Do(MakeUndoRedoObject(string.Format(Se.Language.General.OriginalSubtitleLoadedX, fileName)));
     }
 
     /// <summary>
@@ -3737,6 +3766,10 @@ public partial class MainViewModel :
     [RelayCommand]
     private async Task FileCloseOriginal()
     {
+        // As in SubtitleOpenOriginal: the close becomes its own undo step below, so pending edits
+        // must be recorded as theirs first.
+        _undoRedoManager.CheckForChanges(null);
+
         if (IsOriginalReadOnly || IsShowingOriginalNonMatchingLines || IsEditOriginalMode)
         {
             // An editable original with unsaved edits gets the save prompt before anything is torn
@@ -3778,6 +3811,7 @@ public partial class MainViewModel :
 
         ShowColumnOriginalText = false;
         AutoFitColumns();
+        _undoRedoManager.Do(MakeUndoRedoObject(Se.Language.General.OriginalSubtitleClosed));
         _shortcutManager.ClearKeys();
     }
 
@@ -4049,12 +4083,7 @@ public partial class MainViewModel :
             // Seek the video to the restored line - otherwise Reopen leaves it at 0:00.
             await SeekVideoToSelectedLineAsync();
 
-            if (!string.IsNullOrEmpty(recentFile.SubtitleFileNameOriginal) &&
-                File.Exists(recentFile.SubtitleFileNameOriginal))
-            {
-                var selectedIndex = recentFile.SelectedLine;
-                await SubtitleOpenOriginal(selectedIndex, recentFile.SubtitleFileNameOriginal);
-            }
+            await RestoreRememberedOriginal(recentFile.SelectedLine, recentFile.SubtitleFileNameOriginal, recentFile.SubtitleFileName);
 
             SetRecentFileProperties(recentFile);
 
@@ -20896,6 +20925,12 @@ public partial class MainViewModel :
             SubtitleFileNameOriginal = _subtitleFileNameOriginal,
             SubtitleHeaderOriginal = _subtitleOriginal?.Header,
             SubtitleFooterOriginal = _subtitleOriginal?.Footer,
+            IsOriginalLoaded = _subtitleOriginal is { Paragraphs.Count: > 0 },
+            ShowColumnOriginalText = ShowColumnOriginalText,
+            IsOriginalReadOnly = IsOriginalReadOnly,
+            IsShowingOriginalNonMatchingLines = IsShowingOriginalNonMatchingLines,
+            IsEditOriginalMode = IsEditOriginalMode,
+            SubtitleOriginalFormat = _subtitleOriginal?.OriginalFormat,
         };
     }
 
@@ -20928,14 +20963,73 @@ public partial class MainViewModel :
         // Restore the original-subtitle file-level state too - the undo hash covers it,
         // so leaving it untouched makes the restored state hash-mismatch its own entry,
         // and the next Undo() clears the redo timeline as "unrecorded changes" (#12952).
+        var previousOriginalFileName = _subtitleFileNameOriginal ?? string.Empty;
         _subtitleFileNameOriginal = undoRedoObject.SubtitleFileNameOriginal;
-        _subtitleOriginal ??= new Subtitle();
-        _subtitleOriginal.Header = undoRedoObject.SubtitleHeaderOriginal;
-        _subtitleOriginal.Footer = undoRedoObject.SubtitleFooterOriginal;
+        RestoreOriginalState(undoRedoObject);
+
+        // The baseline says what the original's file holds. Undoing an edit to the original keeps
+        // it (the restored state is then clean or dirty exactly as it should be); undoing or
+        // redoing across an open or close is a different file, whose baseline is the restored
+        // content itself - otherwise the undone open left the column "unsaved", and closing SE
+        // offered to save an original that no longer existed as an empty file (#14634).
+        if (!string.Equals(previousOriginalFileName, _subtitleFileNameOriginal ?? string.Empty, StringComparison.Ordinal))
+        {
+            _changeSubtitleHashOriginal = GetFastHashOriginal();
+        }
 
         if (scrollToSelected)
         {
             SelectAndScrollToRow(undoRedoObject.SelectedLines.First());
+        }
+    }
+
+    /// <summary>
+    /// Puts the original back the way the snapshot had it: loaded or not, shown or hidden, read-only
+    /// or editable, with or without its display-only rows. The rows are the working text and were
+    /// restored already, so the original subtitle is rebuilt from them rather than snapshotted -
+    /// the same way every save and tool rebuilds it. Before this only the original's file name,
+    /// header and footer came back, so undoing past "open original" left an original column and
+    /// edit box with nothing behind them (#14634).
+    /// </summary>
+    private void RestoreOriginalState(UndoRedoItem undoRedoObject)
+    {
+        IsOriginalReadOnly = undoRedoObject.IsOriginalReadOnly;
+        IsShowingOriginalNonMatchingLines = undoRedoObject.IsShowingOriginalNonMatchingLines;
+        IsEditOriginalMode = undoRedoObject.IsEditOriginalMode;
+
+        if (undoRedoObject.IsOriginalLoaded)
+        {
+            _subtitleOriginal ??= new Subtitle();
+            if (undoRedoObject.SubtitleOriginalFormat != null)
+            {
+                _subtitleOriginal.OriginalFormat = undoRedoObject.SubtitleOriginalFormat;
+            }
+
+            // Rebuild after the mode flags above: with the non-matching lines shown, the display-only
+            // rows are original lines and the working rows without a counterpart are not.
+            GetUpdateSubtitleOriginal();
+        }
+        else
+        {
+            _subtitleOriginal = new Subtitle();
+            _subtitleOriginalBeforeEditMode = null;
+
+            // A remembered original-only scope would make every find come up empty now that the
+            // original is gone (as FileCloseOriginal does).
+            _findService.CurrentScope = FindScope.TextAndOriginal;
+        }
+
+        _subtitleOriginal.Header = undoRedoObject.SubtitleHeaderOriginal;
+        _subtitleOriginal.Footer = undoRedoObject.SubtitleFooterOriginal;
+
+        // The restored rows already hold the reference projection the snapshot was taken with, so
+        // no re-match is pending - the rebuild's collection changes flagged one.
+        _referenceMappingDirty = false;
+
+        if (ShowColumnOriginalText != undoRedoObject.ShowColumnOriginalText)
+        {
+            ShowColumnOriginalText = undoRedoObject.ShowColumnOriginalText;
+            AutoFitColumns();
         }
     }
 
@@ -25250,11 +25344,7 @@ public partial class MainViewModel :
 
                         // Restore the original/translator-mode file too - otherwise only the
                         // translation comes back on start-up, unlike the Reopen menu (issue #12705).
-                        if (!string.IsNullOrEmpty(first.SubtitleFileNameOriginal) &&
-                            File.Exists(first.SubtitleFileNameOriginal))
-                        {
-                            await SubtitleOpenOriginal(first.SelectedLine, first.SubtitleFileNameOriginal);
-                        }
+                        await RestoreRememberedOriginal(first.SelectedLine, first.SubtitleFileNameOriginal, first.SubtitleFileName);
 
                         SetRecentFileProperties(first);
                     }

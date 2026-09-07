@@ -402,6 +402,8 @@
     "openVideoFileTitle": "Open video file",
     "optimalCharactersPerSecond": "Optimal characters per second",
     "options": "Options",
+    "originalSubtitleClosed": "Original subtitle closed",
+    "originalSubtitleLoadedX": "Original subtitle loaded: {0}",
     "originalText": "Original text",
     "outline": "Outline",
     "outlineColor": "Outline color",
