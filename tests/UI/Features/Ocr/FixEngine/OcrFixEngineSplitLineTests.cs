@@ -40,6 +40,21 @@ public class OcrFixEngineSplitLineTests
         Assert.Equal(line, string.Concat(result.Words.Select(w => w.Word)));
     }
 
+    // Discussion #12929: Tesseract writes "‘cause" and "didn’t" with typographic quotes; the OCR
+    // output uses the plain apostrophe.
+    [Theory]
+    [InlineData("‘cause I promised", "'cause I promised")]
+    [InlineData("it didn’t take much", "it didn't take much")]
+    [InlineData("-'‘cause of the blood.", "-'cause of the blood.")]
+    [InlineData("Excuse me, ma‘'am.", "Excuse me, ma'am.")]
+    [InlineData("plain 'text' stays", "plain 'text' stays")]
+    [InlineData("“double” stays", "“double” stays")]
+    [InlineData("La lettera ‘E’ canta", "La lettera ‘E’ canta")] // opening + closing = a quotation
+    public void NormalizeApostrophes_CurlySingleQuotes_BecomePlain(string input, string expected)
+    {
+        Assert.Equal(expected, OcrFixEngine.NormalizeApostrophes(input));
+    }
+
     [Fact]
     public void SplitLine_ValidTag_IsParsedAsTag()
     {

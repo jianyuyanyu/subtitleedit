@@ -77,6 +77,7 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
         var wordsToIgnore = new List<string>();
 
         var replacedLine = ReplaceLineFixes(index, text, wordsToIgnore);
+        replacedLine = NormalizeApostrophes(replacedLine);
         replacedLine = FixStartWithUppercaseLetterAfterSentenceEnd(index, replacedLine);
         var splitLine = SplitLine(replacedLine, index);
         if (replacedLine != text)
@@ -199,6 +200,30 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
         var lastSpace = lastLine.LastIndexOf(' ');
         var lastWord = lastSpace < 0 ? lastLine : lastLine.Substring(lastSpace + 1);
         return _abbreviations.Contains(lastWord);
+    }
+
+    /// <summary>
+    /// Tesseract emits typographic single quotes for apostrophes ("‘cause", "didn’t"); subtitles
+    /// use the plain apostrophe, and SE4 straightened them too. A line holding both an opening
+    /// and a closing curly quote is quoting something ("La lettera ‘E’") and is left alone. Runs
+    /// after the replace list so entries written with the curly forms still match.
+    /// </summary>
+    internal static string NormalizeApostrophes(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        var hasOpening = text.IndexOf('‘') >= 0;
+        var hasClosing = text.IndexOf('’') >= 0;
+        if (hasOpening == hasClosing)
+        {
+            return text; // neither, or a quotation pair
+        }
+
+        // Tesseract also emits both forms side by side ("'‘cause", "ma‘'am") - collapse the pair.
+        return text.Replace('‘', '\'').Replace('’', '\'').Replace("''", "'");
     }
 
     private string ReplaceLineFixes(int index, string text, List<string> wordsToIgnore)
