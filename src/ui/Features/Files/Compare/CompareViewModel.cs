@@ -325,13 +325,36 @@ public partial class CompareViewModel : ObservableObject
         // remove items not in differences
         if (onlyShowTextDiff || onlyShowDiff)
         {
-            for (var idx = LeftSubtitles.Count - 1; idx >= 0; idx--)
+            var differenceSet = new HashSet<int>(differences);
+            var leftCount = LeftSubtitles.Count;
+            var leftSurvivors = new List<CompareItem>(differenceSet.Count);
+            var rightSurvivors = new List<CompareItem>(differenceSet.Count);
+            for (var idx = 0; idx < leftCount; idx++)
             {
-                if (!differences.Contains(idx))
+                if (differenceSet.Contains(idx))
                 {
-                    LeftSubtitles.RemoveAt(idx);
-                    RightSubtitles.RemoveAt(idx);
+                    leftSurvivors.Add(LeftSubtitles[idx]);
+                    rightSurvivors.Add(RightSubtitles[idx]);
                 }
+            }
+
+            // Rows beyond the left count were never removed by the old per-row loop.
+            for (var idx = leftCount; idx < RightSubtitles.Count; idx++)
+            {
+                rightSurvivors.Add(RightSubtitles[idx]);
+            }
+
+            // Rebuild both collections in one pass instead of one RemoveAt notification per row.
+            LeftSubtitles.Clear();
+            RightSubtitles.Clear();
+            foreach (var item in leftSurvivors)
+            {
+                LeftSubtitles.Add(item);
+            }
+
+            foreach (var item in rightSurvivors)
+            {
+                RightSubtitles.Add(item);
             }
         }
 
