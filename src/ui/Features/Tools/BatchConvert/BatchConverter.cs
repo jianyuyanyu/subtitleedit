@@ -417,6 +417,8 @@ public class BatchConverter : IBatchConverter, IFixCallbacks
                 await RunOcrTesseract(imageSubtitle, item, cancellationToken);
             }
 
+            if (item.Subtitle != null) { item.Subtitle.Renumber(1); }
+
             // OCR is only one step of the run - the item still goes through the convert functions
             // and the save before it can say "Converted". Leaving the last progress value up would
             // show a finished-looking "OCR: 100%" for that whole stretch, so put the row back to
