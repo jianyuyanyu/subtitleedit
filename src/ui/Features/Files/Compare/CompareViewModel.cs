@@ -807,17 +807,18 @@ public partial class CompareViewModel : ObservableObject
         {
             var itemLeft = LeftSubtitles[i];
             var itemRight = RightSubtitles[i];
+            var (leftTextHtml, rightTextHtml) = GetHtmlTextPair(itemLeft, itemRight);
 
             sb.AppendLine("    <tr>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemLeft.NumberBackgroundBrush) + ">" + GetHtmlText(itemLeft, itemLeft.Number.ToString()) + "</td>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemLeft.StartTimeBackgroundBrush) + ">" + GetHtmlText(itemLeft, new TimeCode(itemLeft.StartTime).ToDisplayString()) + "</td>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemLeft.EndTimeBackgroundBrush) + ">" + GetHtmlText(itemLeft, new TimeCode(itemLeft.EndTime).ToDisplayString()) + "</td>");
-            sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemLeft.TextBackgroundBrush) + ">" + GetHtmlText(itemLeft, itemLeft.Text) + "</td>");
+            sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemLeft.TextBackgroundBrush) + ">" + leftTextHtml + "</td>");
             sb.AppendLine("      <td>&nbsp;</td>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemRight.NumberBackgroundBrush) + ">" + GetHtmlText(itemRight, itemRight.Number.ToString()) + "</td>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemRight.StartTimeBackgroundBrush) + ">" + GetHtmlText(itemRight, new TimeCode(itemRight.StartTime).ToDisplayString()) + "</td>");
             sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemRight.EndTimeBackgroundBrush) + ">" + GetHtmlText(itemRight, new TimeCode(itemRight.EndTime).ToDisplayString()) + "</td>");
-            sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemRight.TextBackgroundBrush) + ">" + GetHtmlText(itemRight, itemRight.Text) + "</td>");
+            sb.AppendLine("      <td" + GetHtmlBackgroundColor(itemRight.TextBackgroundBrush) + ">" + rightTextHtml + "</td>");
             sb.AppendLine("    </tr>");
         }
         sb.AppendLine("    <tr>");
@@ -894,6 +895,21 @@ public partial class CompareViewModel : ObservableObject
     partial void OnRightFileNameChanged(string value)
     {
         OnPropertyChanged(nameof(RightFileNameDisplay));
+    }
+
+    /// <summary>
+    /// The text cells of an exported row carry the same word-level marking the window shows:
+    /// the differing runs in red, the rest of a differing line on pale green. A pair the options
+    /// count as equal is exported plain, exactly as the window leaves it unmarked.
+    /// </summary>
+    private (string left, string right) GetHtmlTextPair(CompareItem left, CompareItem right)
+    {
+        if (left.IsDefault || right.IsDefault || AreTextsEqual(left, right))
+        {
+            return (GetHtmlText(left, left.Text), GetHtmlText(right, right.Text));
+        }
+
+        return TextDiffHighlighter.CompareToHtml(left.Text, right.Text, IgnoreWhiteSpace, IgnoreFormatting);
     }
 
     private static string GetHtmlText(CompareItem p, string text)
