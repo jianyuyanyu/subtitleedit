@@ -8,7 +8,7 @@ using System.IO;
 namespace UITests.Features.Ocr.FixEngine;
 
 // Discussion #12929: Tesseract reads a trailing ellipsis as ". .." ("Wait. ..", "What the. ..").
-// The English replace list turns letter + ". .." at the end of a line back into letter + "...".
+// The English replace list turns a letter or digit + ". .." at the end of a line back into "...".
 public class OcrFixDotSpaceDotsTests : IDisposable
 {
     private readonly Func<string> _originalSpellCheckDictionariesFolder;
@@ -25,7 +25,7 @@ public class OcrFixDotSpaceDotsTests : IDisposable
         File.WriteAllText(
             Path.Combine(_tempDictionariesFolder, "eng_OCRFixReplaceList.xml"),
             "<ReplaceList><RegularExpressions>" +
-            "<RegEx find=\"(\\p{L})\\. \\.\\.(?=\\r?$)\" replaceWith=\"$1...\" />" +
+            "<RegEx find=\"([\\p{L}\\d])\\. \\.\\.(?=\\r?$)\" replaceWith=\"$1...\" />" +
             "</RegularExpressions></ReplaceList>");
     }
 
@@ -35,7 +35,8 @@ public class OcrFixDotSpaceDotsTests : IDisposable
     [InlineData("-Kick-Ass. ..\r\n-Get him out of here.", "-Kick-Ass...\r\n-Get him out of here.")]
     [InlineData("-Kick-Ass. ..\n-Get him out of here.", "-Kick-Ass...\n-Get him out of here.")]
     [InlineData("Wait. .. what?", "Wait. .. what?")] // not at the end of the line - left alone
-    [InlineData("3. ..", "3. ..")] // digit, not a letter - left alone
+    [InlineData("3. ..", "3...")]
+    [InlineData("?. ..", "?. ..")] // punctuation before it - left alone
     public void FixOcrErrors_LetterDotSpaceDots_BecomesEllipsis(string input, string expected)
     {
         IOcrFixEngine engine = new OcrFixEngine(new AcceptAllSpellChecker());
