@@ -12983,6 +12983,7 @@ public partial class MainViewModel :
             AudioVisualizer.MinGapSeconds = Se.Settings.General.MinimumBetweenLines.GetMilliseconds() / 1000.0;
             AudioVisualizer.WaveformHeightPercentage = Se.Settings.Waveform.SpectrogramCombinedWaveformHeight;
             AudioVisualizer.FocusOnMouseOver = Se.Settings.Waveform.FocusOnMouseOver;
+            AudioVisualizer.ShowOriginalSubtitleOverlay = Se.Settings.Waveform.ShowOriginalSubtitle;
             AudioVisualizer.ResetCache();
 
             InitializeLibMpv();
