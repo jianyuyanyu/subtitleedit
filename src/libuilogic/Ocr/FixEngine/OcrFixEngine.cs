@@ -189,8 +189,10 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
             if (char.IsLetterOrDigit(line[i]) && line[i] != '"')
             {
                 var wordStart = i;
+                // U+2019 is the apostrophe Tesseract emits for "didn’t"; without it the word split
+                // into "didn" + "’" + "t" and "didn" was flagged as unknown.
                 while (i < line.Length &&
-                       (char.IsLetterOrDigit(line[i]) || line[i] == '\'' || line[i] == '-'))
+                       (char.IsLetterOrDigit(line[i]) || line[i] == '\'' || line[i] == '’' || line[i] == '-'))
                 {
                     i++;
                 }
