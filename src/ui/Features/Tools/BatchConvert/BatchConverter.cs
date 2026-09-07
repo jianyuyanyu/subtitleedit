@@ -356,6 +356,7 @@ public class BatchConverter : IBatchConverter, IFixCallbacks
                             {
                                 item.Subtitle = new Subtitle();
                                 item.Subtitle.Paragraphs.AddRange(track.Mdia.Minf.Stbl.GetParagraphs());
+                                item.Subtitle.Renumber(); // the sample table never numbers its paragraphs
                                 var fileName = Path.GetFileName(item.FileName);
                                 item.OutputFileName = fileName.Substring(0, fileName.LastIndexOf('.')).TrimEnd('.') + ".mp4";
                                 break;
@@ -416,6 +417,10 @@ public class BatchConverter : IBatchConverter, IFixCallbacks
             {
                 await RunOcrTesseract(imageSubtitle, item, cancellationToken);
             }
+
+            // The OCR runners build paragraphs with "new Paragraph(text, start, end)", which leaves
+            // Number at 0 - the SubRip writer emits that verbatim, so every cue would be numbered 0.
+            item.Subtitle?.Renumber();
 
             // OCR is only one step of the run - the item still goes through the convert functions
             // and the save before it can say "Converted". Leaving the last progress value up would
