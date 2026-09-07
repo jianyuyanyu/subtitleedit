@@ -12,6 +12,8 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
 
         public override string Name => "Caption Inc";
 
+        private static readonly Encoding Cp1252 = Encoding.GetEncoding(1252);
+
         public static void Save(string fileName, Subtitle subtitle)
         {
             using (var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write))
@@ -35,7 +37,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                 fs.Write(buffer, 0, buffer.Length);
 
                 // paragraphs
-                var cp1252 = Encoding.GetEncoding(1252);
+                var cp1252 = Cp1252;
                 var oneChar = new char[1];
                 var oneByte = new byte[4];
                 foreach (Paragraph p in subtitle.Paragraphs)
@@ -202,7 +204,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                         }
                         else if (buffer[i] <= 0x17)
                         {
-                            if (!sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
+                            if (!sb.EndsWith(Environment.NewLine))
                             {
                                 sb.Append(Environment.NewLine);
                             }
@@ -211,7 +213,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                         }
                         else
                         {
-                            sb.Append(Encoding.GetEncoding(1252).GetString(buffer, i, 1));
+                            sb.Append(Cp1252.GetString(buffer, i, 1));
                         }
 
                         i++;

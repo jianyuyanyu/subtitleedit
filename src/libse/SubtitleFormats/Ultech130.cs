@@ -232,7 +232,7 @@ namespace Nikse.SubtitleEdit.Core.SubtitleFormats
                         {
                             byte b2 = buffer[k + 1];
                             skipCount = 1;
-                            if (sb.Length > 0 && !sb.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal) && !sb.EndsWith('>'))
+                            if (sb.Length > 0 && !sb.EndsWith(Environment.NewLine) && !sb.EndsWith('>'))
                             {
                                 if (italics)
                                 {

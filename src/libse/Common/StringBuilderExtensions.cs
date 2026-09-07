@@ -37,6 +37,50 @@ namespace Nikse.SubtitleEdit.Core.Common
             return sb.Length > 0 && sb[sb.Length - 1] == c;
         }
 
+        // Ordinal "sb.ToString().EndsWith(value)" without materializing the builder.
+        public static bool EndsWith(this StringBuilder sb, string value)
+        {
+            var offset = sb.Length - value.Length;
+            if (offset < 0)
+            {
+                return false;
+            }
+
+            for (var i = value.Length - 1; i >= 0; i--)
+            {
+                if (sb[offset + i] != value[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Same answer as string.IsNullOrWhiteSpace(sb.ToString()) without the copy.
+        // Walks the chunks directly: the StringBuilder indexer locates the chunk on every call,
+        // which is cheap at the tail but quadratic when scanning from the front.
+        public static bool IsNullOrWhiteSpace(this StringBuilder sb)
+        {
+#if NETSTANDARD2_1
+            return string.IsNullOrWhiteSpace(sb.ToString());
+#else
+            foreach (var chunk in sb.GetChunks())
+            {
+                var span = chunk.Span;
+                for (var i = 0; i < span.Length; i++)
+                {
+                    if (!char.IsWhiteSpace(span[i]))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+#endif
+        }
+
         // Same count as scanning sb.ToString() without materializing the whole
         // accumulated text into a fresh string.
         public static int CountChar(this StringBuilder sb, char c)
