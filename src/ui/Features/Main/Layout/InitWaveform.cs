@@ -76,7 +76,7 @@ public class InitWaveform
                 // built later must come up on the same side of it as the video preview, or the
                 // two previews show different texts (see SetOriginalTextInPreview).
                 ShowOriginalText = vm.ShowOriginalTextInPreview,
-                ShowOriginalSubtitle = settings.ShowOriginalSubtitle,
+                ShowOriginalSubtitleOverlay = settings.ShowOriginalSubtitle,
             };
 
             vm.AudioVisualizer.GetIsVideoPlaying = () => vm.GetVideoPlayerControl()?.IsPlaying == true;
@@ -326,7 +326,7 @@ public class InitWaveform
             showOriginalSubtitleMenuItem.Click += (_, _) =>
             {
                 settings.ShowOriginalSubtitle = showOriginalSubtitleMenuItem.IsChecked;
-                vm.AudioVisualizer.ShowOriginalSubtitle = showOriginalSubtitleMenuItem.IsChecked;
+                vm.AudioVisualizer.ShowOriginalSubtitleOverlay = showOriginalSubtitleMenuItem.IsChecked;
                 vm.UpdateWaveformOriginalSubtitleCues(vm.AudioVisualizer);
             };
             flyout.Items.Add(showOriginalSubtitleMenuItem);

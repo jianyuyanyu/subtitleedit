@@ -223,11 +223,11 @@ public class AudioVisualizer : Control
     // video/audio preview" (#14252). Only the main window sets it, and only while an original
     // subtitle is loaded; the dialogs that host a waveform keep showing the text they were given.
     public bool ShowOriginalText { get; set; }
-    public bool ShowOriginalSubtitle { get; set; }
+    public bool ShowOriginalSubtitleOverlay { get; set; }
 
     private readonly List<WaveformOriginalSubtitleCue> _originalSubtitleCues = new();
     private const double OriginalSubtitleOpacity = 0.5;
-    private bool IsOriginalSubtitleOverlayVisible => ShowOriginalSubtitle && _originalSubtitleCues.Count > 0;
+    private bool IsOriginalSubtitleOverlayVisible => ShowOriginalSubtitleOverlay && _originalSubtitleCues.Count > 0;
     private bool ShowOriginalTextInWaveform => ShowOriginalText && !IsOriginalSubtitleOverlayVisible;
 
     public void SetOriginalSubtitleCues(IReadOnlyList<WaveformOriginalSubtitleCue>? cues)
