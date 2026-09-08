@@ -50,6 +50,7 @@ public class OcrFixEngineSplitLineTests
     [InlineData("plain 'text' stays", "plain 'text' stays")]
     [InlineData("“double” stays", "“double” stays")]
     [InlineData("La lettera ‘E’ canta", "La lettera ‘E’ canta")] // opening + closing = a quotation
+    [InlineData("He said ''hi'' and didn’t leave.", "He said ''hi'' and didn't leave.")] // only the OCR's own pair collapses
     public void NormalizeApostrophes_CurlySingleQuotes_BecomePlain(string input, string expected)
     {
         Assert.Equal(expected, OcrFixEngine.NormalizeApostrophes(input));

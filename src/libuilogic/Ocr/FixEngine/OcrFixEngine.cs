@@ -77,7 +77,11 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
         var wordsToIgnore = new List<string>();
 
         var replacedLine = ReplaceLineFixes(index, text, wordsToIgnore);
-        replacedLine = NormalizeApostrophes(replacedLine);
+        if (Configuration.Settings.Tools.OcrFixUseHardcodedRules)
+        {
+            replacedLine = NormalizeApostrophes(replacedLine);
+        }
+
         replacedLine = FixStartWithUppercaseLetterAfterSentenceEnd(index, replacedLine);
         var splitLine = SplitLine(replacedLine, index);
         if (replacedLine != text)
@@ -204,9 +208,11 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
 
     /// <summary>
     /// Tesseract emits typographic single quotes for apostrophes ("‘cause", "didn’t"); subtitles
-    /// use the plain apostrophe, and SE4 straightened them too. A line holding both an opening
-    /// and a closing curly quote is quoting something ("La lettera ‘E’") and is left alone. Runs
-    /// after the replace list so entries written with the curly forms still match.
+    /// use the plain apostrophe. A line holding both an opening and a closing curly quote is
+    /// quoting something ("La lettera ‘E’") and is left alone. Runs after the replace list so
+    /// entries written with the curly forms still match. Like the per-word straightening in
+    /// <see cref="OcrFixReplaceList2.FixCommonWordErrors"/> it is one of the hardcoded rules, so
+    /// "use hardcoded rules" turns both off together.
     /// </summary>
     internal static string NormalizeApostrophes(string text)
     {
@@ -222,8 +228,10 @@ public partial class OcrFixEngine : IOcrFixEngine, IDoSpell
             return text; // neither, or a quotation pair
         }
 
-        // Tesseract also emits both forms side by side ("'‘cause", "ma‘'am") - collapse the pair.
-        return text.Replace('‘', '\'').Replace('’', '\'').Replace("''", "'");
+        // Tesseract also emits both forms side by side ("'‘cause", "ma‘'am") - collapse that pair,
+        // but only that pair: a straight '' elsewhere on the line is not the OCR's doing.
+        return text.Replace("'‘", "'").Replace("‘'", "'").Replace("'’", "'").Replace("’'", "'")
+            .Replace('‘', '\'').Replace('’', '\'');
     }
 
     private string ReplaceLineFixes(int index, string text, List<string> wordsToIgnore)
