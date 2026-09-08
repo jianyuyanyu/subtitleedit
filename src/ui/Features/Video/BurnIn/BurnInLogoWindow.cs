@@ -246,7 +246,7 @@ public class BurnInLogoWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        _vm.VideoPlayerControl?.Close();
+        _vm.VideoPlayerControl?.CloseAndDisposePlayer();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
