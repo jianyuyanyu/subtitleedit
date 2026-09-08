@@ -163,11 +163,48 @@ public class TesseractOcr
         return changed ? string.Concat(first) : null;
     }
 
+    /// <summary>
+    /// Whole-word match: the token is unknown when one of its words (the runs between punctuation
+    /// and tags, e.g. "diedq" in "diedq,") equals a flagged word. A substring test would let a lone
+    /// unknown "l" claim nearly every English token and replace words the dictionary accepted.
+    /// </summary>
     private static bool ContainsUnknownWord(string token, IReadOnlyCollection<string> unknownWords)
+    {
+        var start = -1;
+        for (var i = 0; i <= token.Length; i++)
+        {
+            // Same word characters as OcrFixEngine.SplitLine, which produced the unknown words.
+            var isWordChar = i < token.Length && (char.IsLetterOrDigit(token[i]) || token[i] == '\'' || token[i] == '’' || token[i] == '-');
+            if (isWordChar)
+            {
+                if (start < 0)
+                {
+                    start = i;
+                }
+
+                continue;
+            }
+
+            if (start >= 0)
+            {
+                var word = token.AsSpan(start, i - start);
+                if (IsUnknownWord(word, unknownWords) || IsUnknownWord(word.Trim("'’-"), unknownWords))
+                {
+                    return true;
+                }
+
+                start = -1;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnknownWord(ReadOnlySpan<char> word, IReadOnlyCollection<string> unknownWords)
     {
         foreach (var unknown in unknownWords)
         {
-            if (unknown.Length > 0 && token.Contains(unknown, StringComparison.Ordinal))
+            if (word.Length > 0 && word.Equals(unknown.AsSpan(), StringComparison.Ordinal))
             {
                 return true;
             }
