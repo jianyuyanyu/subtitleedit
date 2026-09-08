@@ -65,6 +65,24 @@ public class TesseractOcrPrepareImageTests
     }
 
     [Fact]
+    public void MergeRetryUnknownWords_MatchesUnknownWordsWhole_NotAsSubstrings()
+    {
+        // A lone "l" (misread "I") is the most common unknown word, and nearly every token contains
+        // an "l" - it must only claim the token that IS "l", not "fell".
+        var merged = TesseractOcr.MergeRetryUnknownWords("l fell 18 times", "I fall 718 times", new[] { "l" });
+
+        Assert.Equal("I fell 18 times", merged);
+    }
+
+    [Theory]
+    [InlineData("<i>diedq,</i>", "<i>died,</i>", "diedq", "<i>died,</i>")]
+    [InlineData("didn'tq.", "didn't.", "didn'tq", "didn't.")]
+    public void MergeRetryUnknownWords_MatchesThroughPunctuationAndTags(string firstPass, string retry, string unknown, string expected)
+    {
+        Assert.Equal(expected, TesseractOcr.MergeRetryUnknownWords(firstPass, retry, new[] { unknown }));
+    }
+
+    [Fact]
     public void MergeRetryUnknownWords_KeepsLineBreaks()
     {
         var merged = TesseractOcr.MergeRetryUnknownWords("-Yeanh.\n-You've got nothing.", "-Yeah.\n-You've got nothing.", new[] { "Yeanh" });
