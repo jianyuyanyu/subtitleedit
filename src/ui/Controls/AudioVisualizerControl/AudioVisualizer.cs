@@ -223,6 +223,23 @@ public class AudioVisualizer : Control
     // video/audio preview" (#14252). Only the main window sets it, and only while an original
     // subtitle is loaded; the dialogs that host a waveform keep showing the text they were given.
     public bool ShowOriginalText { get; set; }
+    public bool ShowOriginalSubtitleOverlay { get; set; }
+
+    private readonly List<WaveformOriginalSubtitleCue> _originalSubtitleCues = new();
+    private const double OriginalSubtitleOpacity = 0.5;
+    private bool IsOriginalSubtitleOverlayVisible => ShowOriginalSubtitleOverlay && _originalSubtitleCues.Count > 0;
+    private bool ShowOriginalTextInWaveform => ShowOriginalText && !IsOriginalSubtitleOverlayVisible;
+
+    public void SetOriginalSubtitleCues(IReadOnlyList<WaveformOriginalSubtitleCue>? cues)
+    {
+        _originalSubtitleCues.Clear();
+        if (cues != null)
+        {
+            _originalSubtitleCues.AddRange(cues);
+        }
+
+        InvalidateVisual();
+    }
 
     // Lets the wheel handler ask the host whether the video is playing, so a plain scroll in
     // "center video position" mode can turn into a seek that keeps the play-head centered
@@ -3236,12 +3253,21 @@ public class AudioVisualizer : Control
             }
         }
 
+        var showOriginalSubtitle = IsOriginalSubtitleOverlayVisible;
+        var workingTextHeight = showOriginalSubtitle ? renderCtx.Height / 2.0 : renderCtx.Height;
+
         foreach (var p in paragraphs)
         {
             if (p.EndTime.TotalMilliseconds >= startPositionMilliseconds && p.StartTime.TotalMilliseconds <= endPositionMilliseconds)
             {
-                DrawParagraph(p, context, ref renderCtx);
+                DrawParagraph(p, context, ref renderCtx, 0, workingTextHeight);
             }
+        }
+
+        if (showOriginalSubtitle)
+        {
+            var originalSubtitleTop = renderCtx.Height / 2.0;
+            DrawOriginalSubtitleParagraphs(context, ref renderCtx, originalSubtitleTop, renderCtx.Height - originalSubtitleTop);
         }
     }
 
@@ -3364,7 +3390,8 @@ public class AudioVisualizer : Control
         return prepared;
     }
 
-    private void DrawParagraph(SubtitleLineViewModel paragraph, DrawingContext context, ref RenderContext renderCtx)
+    private void DrawParagraph(SubtitleLineViewModel paragraph, DrawingContext context, ref RenderContext renderCtx,
+        double contentTop = 0, double contentHeight = -1)
     {
         var currentRegionLeft = SecondsToXPositionOptimized(paragraph.StartTime.TotalSeconds - renderCtx.StartPositionSeconds, renderCtx.SampleRate, renderCtx.ZoomFactor);
         var currentRegionRight = SecondsToXPositionOptimized(paragraph.EndTime.TotalSeconds - renderCtx.StartPositionSeconds, renderCtx.SampleRate, renderCtx.ZoomFactor);
@@ -3375,50 +3402,117 @@ public class AudioVisualizer : Control
             return;
         }
 
-        var height = renderCtx.Height;
+        if (contentHeight < 0)
+        {
+            contentHeight = renderCtx.Height;
+        }
 
-        // Draw background rectangle
+        // Keep the editable paragraph background and timing borders full-height.
         context.FillRectangle(_selectedParagraphsRenderSet.Contains(paragraph) ? _paintParagraphSelectedBackground : _paintParagraphBackground,
-            new Rect(currentRegionLeft, 0, currentRegionWidth, height));
+            new Rect(currentRegionLeft, 0, currentRegionWidth, renderCtx.Height));
 
         // Draw left and right borders
-        context.DrawLine(_paintLeft, new Point(currentRegionLeft, 0), new Point(currentRegionLeft, height));
-        context.DrawLine(_paintRight, new Point(currentRegionRight - 1, 0), new Point(currentRegionRight - 1, height));
+        context.DrawLine(_paintLeft, new Point(currentRegionLeft, 0), new Point(currentRegionLeft, renderCtx.Height));
+        context.DrawLine(_paintRight, new Point(currentRegionRight - 1, 0), new Point(currentRegionRight - 1, renderCtx.Height));
 
         // Draw clipped text (prepared text + shaped FormattedText are cached; see GetCachedParagraphText).
         // With "toggle translation and original in video/audio preview" on, the waveform shows the
         // original text like SE4 did (#14252).
-        var prepared = GetPreparedParagraphText(ShowOriginalText ? paragraph.OriginalText : paragraph.Text);
+        var text = ShowOriginalTextInWaveform ? paragraph.OriginalText : paragraph.Text;
 
-        var textBounds = new Rect(currentRegionLeft + 1, 0, currentRegionWidth - 3, height);
+        var textBounds = new Rect(currentRegionLeft + 1, contentTop, currentRegionWidth - 3, contentHeight);
 
         using (context.PushClip(textBounds))
         {
-            if (Se.Settings.Waveform.WaveformUnwrapText)
+            DrawParagraphText(context, text, currentRegionLeft + 3, contentTop + 14);
+        }
+
+        // Keep CPS and number/duration at the bottom of the full paragraph region.
+        using (context.PushClip(new Rect(currentRegionLeft + 1, 0, currentRegionWidth - 3, renderCtx.Height)))
+        {
+            DrawParagraphFooter(context, paragraph, currentRegionLeft, currentRegionWidth, ref renderCtx);
+        }
+
+        DrawParagraphAudioLength(context, paragraph, currentRegionLeft, currentRegionRight, contentTop, contentHeight, ref renderCtx);
+    }
+
+    private void DrawOriginalSubtitleParagraphs(DrawingContext context, ref RenderContext renderCtx, double top, double height)
+    {
+        var start = renderCtx.StartPositionSeconds;
+        var end = RelativeXPositionToSecondsOptimized(renderCtx.Width, renderCtx.SampleRate, start, renderCtx.ZoomFactor);
+        var startIndex = FindFirstIndexAfterTime(_originalSubtitleCues, start, static cue => cue.EndSeconds);
+        var lastStart = -1d;
+        var count = 0;
+
+        for (var i = startIndex; i < _originalSubtitleCues.Count; i++)
+        {
+            var cue = _originalSubtitleCues[i];
+            if (cue.StartSeconds > end)
             {
-                var formattedText = GetCachedParagraphText(prepared.Unwrapped, prepared.RightToLeft);
-                context.DrawText(formattedText, new Point(currentRegionLeft + 3, 14));
+                break;
             }
-            else
+
+            if (cue.EndSeconds < start)
             {
-                double addY = 0;
-                foreach (var line in prepared.Lines)
+                continue;
+            }
+
+            var isTooShortOrDense = count > 200 &&
+                                    (cue.EndSeconds - cue.StartSeconds < 0.00001 || cue.StartSeconds - lastStart < 0.09);
+            if (isTooShortOrDense)
+            {
+                continue;
+            }
+
+            lastStart = cue.StartSeconds;
+            count++;
+
+            var left = SecondsToXPositionOptimized(cue.StartSeconds - start, renderCtx.SampleRate, renderCtx.ZoomFactor);
+            var right = SecondsToXPositionOptimized(cue.EndSeconds - start, renderCtx.SampleRate, renderCtx.ZoomFactor);
+            if (right - left <= 5)
+            {
+                continue;
+            }
+
+            // Draw original subtitle cues with the waveform theme at half opacity.
+            using (context.PushOpacity(OriginalSubtitleOpacity))
+            {
+                context.FillRectangle(_paintParagraphBackground, new Rect(left, top, right - left, height));
+                context.DrawLine(_paintLeft, new Point(left, top), new Point(left, top + height));
+                context.DrawLine(_paintRight, new Point(right - 1, top), new Point(right - 1, top + height));
+                using (context.PushClip(new Rect(left + 1, top, right - left - 3, height)))
                 {
-                    var formattedText = GetCachedParagraphText(line, prepared.RightToLeft);
-                    context.DrawText(formattedText, new Point(currentRegionLeft + 3, 14 + addY));
-                    addY += formattedText.Height;
+                    DrawParagraphText(context, cue.Text, left + 3, top + 14);
                 }
             }
 
-            DrawParagraphFooter(context, paragraph, currentRegionLeft, currentRegionWidth, height, ref renderCtx);
+            if (count >= 250)
+            {
+                break;
+            }
+        }
+    }
+
+    private void DrawParagraphText(DrawingContext context, string text, double x, double y)
+    {
+        var prepared = GetPreparedParagraphText(text);
+        if (Se.Settings.Waveform.WaveformUnwrapText)
+        {
+            context.DrawText(GetCachedParagraphText(prepared.Unwrapped, prepared.RightToLeft), new Point(x, y));
+            return;
         }
 
-        DrawParagraphAudioLength(context, paragraph, currentRegionLeft, currentRegionRight, height, ref renderCtx);
+        foreach (var line in prepared.Lines)
+        {
+            var formattedText = GetCachedParagraphText(line, prepared.RightToLeft);
+            context.DrawText(formattedText, new Point(x, y));
+            y += formattedText.Height;
+        }
     }
 
     // Drawn outside the text clip on purpose: the overrun part extends past the right border.
     private void DrawParagraphAudioLength(DrawingContext context, SubtitleLineViewModel paragraph,
-        double currentRegionLeft, double currentRegionRight, double height, ref RenderContext renderCtx)
+        double currentRegionLeft, double currentRegionRight, double top, double height, ref RenderContext renderCtx)
     {
         var provider = ParagraphAudioLengthProvider;
         if (provider == null)
@@ -3434,7 +3528,7 @@ public class AudioVisualizer : Control
 
         var audioRight = SecondsToXPositionOptimized(paragraph.StartTime.TotalSeconds + audioSeconds - renderCtx.StartPositionSeconds, renderCtx.SampleRate, renderCtx.ZoomFactor);
         const double barHeight = 4;
-        var y = height - barHeight - 1;
+        var y = top + height - barHeight - 1;
         var fitsRight = Math.Min(audioRight, currentRegionRight - 1);
         if (fitsRight > currentRegionLeft + 1)
         {
@@ -3456,7 +3550,7 @@ public class AudioVisualizer : Control
     //   51 < n <= 99                                                   → "#NUMBER  DURATION"
     //   n > 99                                                         → add CPS line above
     private void DrawParagraphFooter(DrawingContext context, SubtitleLineViewModel paragraph,
-        double currentRegionLeft, double currentRegionWidth, double height, ref RenderContext renderCtx)
+        double currentRegionLeft, double currentRegionWidth, ref RenderContext renderCtx)
     {
         if (!Se.Settings.Waveform.WaveformShowNumberAndDuration && !Se.Settings.Waveform.WaveformShowCps)
         {
@@ -3502,7 +3596,7 @@ public class AudioVisualizer : Control
         {
             // Counts the text that is actually on screen: with the original drawn, a CPS taken
             // from the hidden translation reads as the original's and would be wrong (#14252).
-            cpsLine = GetCachedCpsLabel(ShowOriginalText
+            cpsLine = GetCachedCpsLabel(ShowOriginalTextInWaveform
                 ? paragraph.OriginalCharactersPerSecond
                 : paragraph.CharactersPerSecond);
         }
@@ -3513,7 +3607,7 @@ public class AudioVisualizer : Control
         }
 
         // Layout from the bottom up so the optional CPS line stacks above the base line.
-        var bottomY = height - 14;
+        var bottomY = renderCtx.Height - 14;
         var x = currentRegionLeft + padding;
 
         if (baseLine != null)
@@ -3976,7 +4070,8 @@ public class AudioVisualizer : Control
         var maxTime = TimeCode.MaxTimeTotalMilliseconds;
 
         // 1. Use Binary Search to find the first potential subtitle in the time range O(log N)
-        var startIndex = FindFirstIndexAfterTime(subtitle, startThreshold);
+        var startIndex = FindFirstIndexAfterTime(subtitle, startThreshold,
+            static paragraph => paragraph.EndTime.TotalMilliseconds);
 
         var lastStartTime = -1d;
         var count = 0;
@@ -4036,15 +4131,15 @@ public class AudioVisualizer : Control
     }
 
     // Helper for Binary Search
-    private static int FindFirstIndexAfterTime(IReadOnlyList<SubtitleLineViewModel> subtitle, double timeMs)
+    private static int FindFirstIndexAfterTime<T>(IReadOnlyList<T> items, double time, Func<T, double> getEndTime)
     {
-        int low = 0, high = subtitle.Count - 1;
+        int low = 0, high = items.Count - 1;
         var result = 0;
 
         while (low <= high)
         {
             int mid = low + (high - low) / 2;
-            if (subtitle[mid].EndTime.TotalMilliseconds >= timeMs)
+            if (getEndTime(items[mid]) >= time)
             {
                 result = mid;
                 high = mid - 1;
