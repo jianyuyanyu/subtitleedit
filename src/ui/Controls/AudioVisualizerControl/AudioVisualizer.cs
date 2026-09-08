@@ -226,6 +226,13 @@ public class AudioVisualizer : Control
     public bool ShowOriginalSubtitleOverlay { get; set; }
 
     private readonly List<WaveformOriginalSubtitleCue> _originalSubtitleCues = new();
+
+    /// <summary>
+    /// Running maximum of <see cref="WaveformOriginalSubtitleCue.EndSeconds"/> over the cues in
+    /// file order. Cues overlap (SDH music lines spanning dialogue, signs), so their end times are
+    /// not monotonic and cannot be binary-searched directly; the running maximum is.
+    /// </summary>
+    private readonly List<double> _originalSubtitleCueMaxEnds = new();
     private const double OriginalSubtitleOpacity = 0.5;
     private bool IsOriginalSubtitleOverlayVisible => ShowOriginalSubtitleOverlay && _originalSubtitleCues.Count > 0;
     private bool ShowOriginalTextInWaveform => ShowOriginalText && !IsOriginalSubtitleOverlayVisible;
@@ -233,9 +240,16 @@ public class AudioVisualizer : Control
     public void SetOriginalSubtitleCues(IReadOnlyList<WaveformOriginalSubtitleCue>? cues)
     {
         _originalSubtitleCues.Clear();
+        _originalSubtitleCueMaxEnds.Clear();
         if (cues != null)
         {
             _originalSubtitleCues.AddRange(cues);
+            var maxEnd = double.MinValue;
+            foreach (var cue in cues)
+            {
+                maxEnd = Math.Max(maxEnd, cue.EndSeconds);
+                _originalSubtitleCueMaxEnds.Add(maxEnd);
+            }
         }
 
         InvalidateVisual();
@@ -3440,7 +3454,9 @@ public class AudioVisualizer : Control
     {
         var start = renderCtx.StartPositionSeconds;
         var end = RelativeXPositionToSecondsOptimized(renderCtx.Width, renderCtx.SampleRate, start, renderCtx.ZoomFactor);
-        var startIndex = FindFirstIndexAfterTime(_originalSubtitleCues, start, static cue => cue.EndSeconds);
+        // A long cue overlapped by a shorter one ends after its successor, so searching the raw
+        // end times from the viewport start would skip it whenever the view begins inside it.
+        var startIndex = FindFirstIndexAfterTime(_originalSubtitleCueMaxEnds, start, static maxEnd => maxEnd);
         var lastStart = -1d;
         var count = 0;
 
