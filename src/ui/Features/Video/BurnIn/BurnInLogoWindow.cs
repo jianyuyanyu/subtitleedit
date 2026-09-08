@@ -69,7 +69,7 @@ public class BurnInLogoWindow : Window
             Maximum = 100,
             Width = 150,
             VerticalAlignment = VerticalAlignment.Center,
-            [!Slider.ValueProperty] = new Binding("BurnInLogo.Alpha"),
+            [!Slider.ValueProperty] = new Binding($"{nameof(vm.BurnInLogo)}.{nameof(vm.BurnInLogo.Alpha)}"),
         };
         sliderAlpha.ValueChanged += (_, _) => vm.UpdateOverlayOpacity();
 
@@ -77,7 +77,7 @@ public class BurnInLogoWindow : Window
         labelAlphaValue.VerticalAlignment = VerticalAlignment.Center;
         labelAlphaValue.Margin = new Thickness(5, 0, 0, 0);
         labelAlphaValue.MinWidth = 35;
-        labelAlphaValue[!TextBlock.TextProperty] = new Binding("BurnInLogo.Alpha") { StringFormat = "{0}%" };
+        labelAlphaValue[!TextBlock.TextProperty] = new Binding($"{nameof(vm.BurnInLogo)}.{nameof(vm.BurnInLogo.Alpha)}") { StringFormat = "{0}%" };
 
         // Logo size slider
         var labelSize = UiUtil.MakeLabel(Se.Language.General.Size);
@@ -90,7 +90,7 @@ public class BurnInLogoWindow : Window
             Maximum = 200,
             Width = 150,
             VerticalAlignment = VerticalAlignment.Center,
-            [!Slider.ValueProperty] = new Binding("BurnInLogo.Size"),
+            [!Slider.ValueProperty] = new Binding($"{nameof(vm.BurnInLogo)}.{nameof(vm.BurnInLogo.Size)}"),
         };
         sliderSize.ValueChanged += (_, _) => vm.UpdateLogoSize();
 
@@ -98,7 +98,7 @@ public class BurnInLogoWindow : Window
         labelSizeValue.VerticalAlignment = VerticalAlignment.Center;
         labelSizeValue.Margin = new Thickness(5, 0, 0, 0);
         labelSizeValue.MinWidth = 35;
-        labelSizeValue[!TextBlock.TextProperty] = new Binding("BurnInLogo.Size") { StringFormat = "{0}%" };
+        labelSizeValue[!TextBlock.TextProperty] = new Binding($"{nameof(vm.BurnInLogo)}.{nameof(vm.BurnInLogo.Size)}") { StringFormat = "{0}%" };
 
         topPanel.Children.Add(buttonPickLogo);
         topPanel.Children.Add(labelLogoPosition);
