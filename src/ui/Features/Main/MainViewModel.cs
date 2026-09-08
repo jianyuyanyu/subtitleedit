@@ -28943,9 +28943,20 @@ public partial class MainViewModel :
                 // Bare and Ctrl+Left/Right are fundamental caret navigation in any
                 // text input — never override them with shortcuts even when
                 // "allow single-letter shortcuts in text box" is on (#11357).
+                // Bare Left/Right always stay with the caret; the modified chords (and
+                // Home/End below) are handed to bound shortcuts when the opt-in
+                // AllowTextNavigationShortcutsInTextbox setting is on (#14654).
+                var allowTextNavigationShortcuts = Se.Settings.Tools.AllowTextNavigationShortcutsInTextbox;
                 if ((keyEventArgs.Key == Key.Left || keyEventArgs.Key == Key.Right)
-                    && (keyEventArgs.KeyModifiers == KeyModifiers.None
-                        || keyEventArgs.KeyModifiers == KeyModifiers.Control
+                    && keyEventArgs.KeyModifiers == KeyModifiers.None)
+                {
+                    _shortcutManager.ClearKeys();
+                    return;
+                }
+
+                if (!allowTextNavigationShortcuts
+                    && (keyEventArgs.Key == Key.Left || keyEventArgs.Key == Key.Right)
+                    && (keyEventArgs.KeyModifiers == KeyModifiers.Control
                         || (OperatingSystem.IsMacOS()
                             && (keyEventArgs.KeyModifiers == KeyModifiers.Alt
                                 || keyEventArgs.KeyModifiers == (KeyModifiers.Shift | KeyModifiers.Alt)))))
@@ -28957,7 +28968,8 @@ public partial class MainViewModel :
                 // Home/End (with or without Ctrl/Cmd/Shift) is likewise standard text editing -
                 // line/document start/end and selection. The "go to first/last line" shortcuts
                 // default to Ctrl+Home/End (#13194) but must stay out of text inputs.
-                if ((keyEventArgs.Key == Key.Home || keyEventArgs.Key == Key.End)
+                if (!allowTextNavigationShortcuts
+                    && (keyEventArgs.Key == Key.Home || keyEventArgs.Key == Key.End)
                     && (keyEventArgs.KeyModifiers & ~(KeyModifiers.Control | KeyModifiers.Shift | KeyModifiers.Meta)) == KeyModifiers.None)
                 {
                     _shortcutManager.ClearKeys();
