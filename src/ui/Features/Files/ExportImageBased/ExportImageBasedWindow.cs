@@ -57,7 +57,7 @@ public class ExportImageBasedWindow : Window
             .WithBindIsVisible(vm, nameof(vm.IsExportButtonVisible));
         buttonExport.IsDefault = true; // the dialog's accept button - Enter runs it (#14586)
         var buttonCancel = UiUtil.MakeButtonCancel(vm.CancelCommand).WithBindIsVisible(nameof(vm.IsGenerating));
-        var buttonDone = UiUtil.MakeButtonDone(vm.CancelCommand).WithBindIsVisible(nameof(vm.IsGenerating), new InverseBooleanConverter());
+        var buttonDone = UiUtil.MakeButtonDone(vm.CancelCommand).WithBindIsVisible(nameof(vm.IsGenerating), InverseBooleanConverter.Instance);
         var panelButtons = UiUtil.MakeButtonBar(buttonExport, buttonDone, buttonCancel);
         
         var comboProfile = UiUtil.MakeComboBox(vm.Profiles, vm, nameof(vm.SelectedProfile));

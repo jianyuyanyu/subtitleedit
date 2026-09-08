@@ -81,16 +81,16 @@ public class BurnInWindow : Window
                 }
             }
         };
-        buttonGenerate.Bind(SplitButton.IsEnabledProperty, new Binding(nameof(vm.IsGenerating)) { Converter = new InverseBooleanConverter() });
+        buttonGenerate.Bind(SplitButton.IsEnabledProperty, new Binding(nameof(vm.IsGenerating)) { Converter = InverseBooleanConverter.Instance });
 
         var buttonBatchMode = UiUtil.MakeButton(Se.Language.General.BatchMode, vm.BatchModeCommand)
-            .WithBindIsVisible(nameof(vm.IsBatchMode), new InverseBooleanConverter())
-            .WithBindEnabled(nameof(vm.IsGenerating), new InverseBooleanConverter());
+            .WithBindIsVisible(nameof(vm.IsBatchMode), InverseBooleanConverter.Instance)
+            .WithBindEnabled(nameof(vm.IsGenerating), InverseBooleanConverter.Instance);
         var buttonHelp = UiUtil.MakeButton(Se.Language.General.Help, vm.HelpCommand);
         var buttonSingleMode = UiUtil.MakeButton(Se.Language.General.SingleMode, vm.SingleModeCommand)
             .WithBindIsVisible(nameof(vm.IsSingleModeVisible))
-            .WithBindEnabled(nameof(vm.IsGenerating), new InverseBooleanConverter());
-        var buttonOk = UiUtil.MakeButtonOk(vm.OkCommand).WithBindEnabled(nameof(vm.IsGenerating), new InverseBooleanConverter());
+            .WithBindEnabled(nameof(vm.IsGenerating), InverseBooleanConverter.Instance);
+        var buttonOk = UiUtil.MakeButtonOk(vm.OkCommand).WithBindEnabled(nameof(vm.IsGenerating), InverseBooleanConverter.Instance);
         var buttonPanel = UiUtil.MakeButtonBar(
             buttonGenerate,
             buttonHelp,
@@ -625,7 +625,7 @@ public class BurnInWindow : Window
         // label aligned with the text rows when both are shown.
         grid.Name = TextSettingsName;
         grid.ColumnDefinitions[0].SharedSizeGroup = LabelColumnGroup;
-        grid.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.IsImageSubtitle)) { Converter = new InverseBooleanConverter() });
+        grid.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.IsImageSubtitle)) { Converter = InverseBooleanConverter.Instance });
 
         var logoGrid = new Grid
         {
@@ -678,7 +678,7 @@ public class BurnInWindow : Window
                 textBoxHeight,
                 buttonResolution,
             }
-        }.WithBindVisible(vm, nameof(vm.UseSourceResolution), new InverseBooleanConverter());
+        }.WithBindVisible(vm, nameof(vm.UseSourceResolution), InverseBooleanConverter.Instance);
 
         var labelSourceResolution = UiUtil.MakeLabel("Use source resolution").WithBindVisible(vm, nameof(vm.UseSourceResolution));
         var buttonResolutionSource = UiUtil.MakeButtonBrowse(vm.BrowseResolutionCommand, accessibleName: Se.Language.General.Resolution);
@@ -1041,7 +1041,7 @@ public class BurnInWindow : Window
         var labelTargetFileSize = UiUtil.MakeLabel(Se.Language.Video.BurnIn.FileSizeMb).WithMarginLeft(10);
         var numericUpDownTargetFileSize = UiUtil.MakeNumericUpDownInt(1, 1000_000_000, 0, 150, vm, nameof(vm.TargetFileSize));
         numericUpDownTargetFileSize.ValueChanged += vm.NumericUpDownTargetFileSizeChanged;
-        numericUpDownTargetFileSize.Bind(NumericUpDown.IsEnabledProperty, new Binding(nameof(vm.MatchSourceVideoSize)) { Converter = new InverseBooleanConverter() });
+        numericUpDownTargetFileSize.Bind(NumericUpDown.IsEnabledProperty, new Binding(nameof(vm.MatchSourceVideoSize)) { Converter = InverseBooleanConverter.Instance });
         var labelVideoBitRate = UiUtil.MakeLabel(string.Empty).WithBindText(vm, nameof(vm.TargetVideoBitRateInfo));
         labelVideoBitRate.FontSize = 10;
         labelVideoBitRate.Opacity = 0.7;
@@ -1119,7 +1119,7 @@ public class BurnInWindow : Window
         grid.Add(labelVideoSizeValue, 1, 1);
 
         return UiUtil.MakeBorderForControl(grid)
-            .WithBindIsVisible(nameof(vm.IsBatchMode), new InverseBooleanConverter())
+            .WithBindIsVisible(nameof(vm.IsBatchMode), InverseBooleanConverter.Instance)
             .WithMarginBottom(5)
             .WithMarginRight(5);
     }
