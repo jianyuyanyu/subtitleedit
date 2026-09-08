@@ -1,5 +1,6 @@
 ﻿using Nikse.SubtitleEdit.Features.Ocr.Download;
 using Nikse.SubtitleEdit.Features.Ocr.Engines;
+using Nikse.SubtitleEdit.Core.Common;
 using Nikse.SubtitleEdit.Logic.Config;
 using SkiaSharp;
 using System;
@@ -90,87 +91,12 @@ public partial class PaddleOcr
         return new PaddleOcrArchive(urls, rootFolderInArchive ?? fileName[..fileName.IndexOf(".7z", StringComparison.Ordinal)]);
     }
 
-    private const string TextlineOrientationModelName = "PP-LCNet_x1_0_textline_ori";
+    // Model-name mapping lives in libse (PaddleOcrModels) so seconv launches the same models.
+    private const string TextlineOrientationModelName = PaddleOcrModels.TextlineOrientationModelName;
 
-    // The script groups below mirror LATIN_LANGS/ARABIC_LANGS/ESLAV_LANGS/CYRILLIC_LANGS/
-    // DEVANAGARI_LANGS in PaddleOCR 3.7 (paddleocr/_utils/langs.py) - the version the
-    // bundled standalone engine is built from. Keep them in sync with GetLanguages(); a
-    // code offered in the dropdown but missing from every group here silently falls
-    // through to the Latin recognition model and OCRs to garbage.
-    private static readonly HashSet<string> LatinLanguageCodes = new HashSet<string>
-    {
-        "af", "az", "bs", "ca", "cs", "cy", "da", "de", "es", "et", "eu",
-        "fi", "fr", "ga", "gl", "hr", "hu", "id", "is", "it", "ku", "la",
-        "lb", "lt", "lv", "mi", "ms", "mt", "nl", "no", "oc", "pi", "pl",
-        "pt", "qu", "rm", "ro", "rs_latin", "sk", "sl", "sq", "sv", "sw",
-        "tl", "tr", "uz", "vi", "french", "german"
-    };
+    internal static IReadOnlyCollection<string> GetLatinLanguageCodesForTest() => PaddleOcrModels.LatinLanguageCodesForTest;
 
-    private static readonly HashSet<string> ArabicLanguageCodes = new HashSet<string>
-    {
-        "ar", "bal", "fa", "ps", "sd", "ug", "ur"
-    };
-
-    private static readonly HashSet<string> EslavLanguageCodes = new HashSet<string>
-    {
-        "ru", "be", "uk"
-    };
-
-    private static readonly HashSet<string> CyrillicLanguageCodes = new HashSet<string>
-    {
-        "rs_cyrillic", "bg", "mn", "abq", "ady", "kbd", "ava", "dar",
-        "inh", "che", "lbe", "lez", "tab", "ba", "bua", "cv", "kaa",
-        "kk", "kv", "ky", "mhr", "mk", "mo", "os", "sah", "tg", "tt",
-        "tyv", "udm", "xal"
-    };
-
-    private static readonly HashSet<string> DevanagariLanguageCodes = new HashSet<string>
-    {
-        "hi", "mr", "ne", "bh", "mai", "ang", "bho", "mah",
-        "sck", "new", "gom", "bgc", "sa"
-    };
-
-    // The languages with their own single-language PP-OCRv5 recognition model.
-    private static readonly HashSet<string> OwnModelLanguageCodes = new HashSet<string>
-    {
-        "el", "ta", "te", "th"
-    };
-
-    // Pali is the one Latin language PP-OCRv6 does not cover, so it stays on the PP-OCRv5
-    // Latin model (_PPOCRV6_UNSUPPORTED_LATIN_LANGS in paddleocr/_pipelines/ocr.py).
-    private const string PaliLanguageCode = "pi";
-
-    /// <summary>
-    /// True for the languages PP-OCRv6 (new in PaddleOCR 3.7) recognizes with its single
-    /// unified model: Chinese, English, Japanese and the Latin languages except Pali - the
-    /// _PPOCRV6_LANGS set in paddleocr/_pipelines/ocr.py. No non-Latin script has a v6 model
-    /// at all, so every other language keeps the PP-OCRv5 (Georgian: PP-OCRv3) models that
-    /// the support-files bundle still ships alongside the v6 pair.
-    /// </summary>
-    private static bool IsPpOcrV6Language(string language)
-    {
-        if (language is "ch" or "chinese_cht" or "en" or "japan")
-        {
-            return true;
-        }
-
-        return LatinLanguageCodes.Contains(language) && language != PaliLanguageCode;
-    }
-
-    // PP-OCRv6 replaced the mobile/server pair with tiny/small/medium tiers, and the bundle
-    // ships small and medium - so the saved mode picks between those two.
-    private static string PpOcrV6Tier(string mode) => mode == "server" ? "medium" : "small";
-
-    internal static IReadOnlyCollection<string> GetLatinLanguageCodesForTest() => LatinLanguageCodes;
-
-    internal static IEnumerable<string> GetAllScriptGroupCodesForTest() =>
-        LatinLanguageCodes
-            .Concat(ArabicLanguageCodes)
-            .Concat(EslavLanguageCodes)
-            .Concat(CyrillicLanguageCodes)
-            .Concat(DevanagariLanguageCodes)
-            .Concat(OwnModelLanguageCodes)
-            .Distinct();
+    internal static IEnumerable<string> GetAllScriptGroupCodesForTest() => PaddleOcrModels.AllScriptGroupCodesForTest;
 
     public PaddleOcr()
     {
@@ -183,70 +109,9 @@ public partial class PaddleOcr
         _cancellationToken = new CancellationToken();
     }
 
-    // Only the recognition models shipped in "PaddleOCR.PP-OCRv6.support.files" are on
-    // disk - nothing is fetched per language. Returning a name that is not in that bundle
-    // points at a folder that does not exist, and the run then fails when PaddleX tries to
-    // read the model's inference.yml.
-    internal static string GetRecName(string language, string mode)
-    {
-        string recName;
-        if (IsPpOcrV6Language(language))
-        {
-            recName = $"PP-OCRv6_{PpOcrV6Tier(mode)}_rec";
-        }
-        else if (ArabicLanguageCodes.Contains(language))
-        {
-            recName = "arabic_PP-OCRv5_mobile_rec";
-        }
-        else if (EslavLanguageCodes.Contains(language))
-        {
-            recName = "eslav_PP-OCRv5_mobile_rec";
-        }
-        else if (CyrillicLanguageCodes.Contains(language))
-        {
-            recName = "cyrillic_PP-OCRv5_mobile_rec";
-        }
-        else if (DevanagariLanguageCodes.Contains(language))
-        {
-            recName = "devanagari_PP-OCRv5_mobile_rec";
-        }
-        else if (language == "korean")
-        {
-            recName = "korean_PP-OCRv5_mobile_rec";
-        }
-        else if (OwnModelLanguageCodes.Contains(language))
-        {
-            recName = $"{language}_PP-OCRv5_mobile_rec";
-        }
-        else if (language == "ka")
-        {
-            // Georgian has no PP-OCRv5 recognition model yet.
-            recName = "ka_PP-OCRv3_mobile_rec";
-        }
-        else
-        {
-            // Pali, plus the safety net for a code no script group claims - the v6 bundle
-            // no longer has a general-purpose PP-OCRv5 model to fall back on.
-            recName = "latin_PP-OCRv5_mobile_rec";
-        }
+    internal static string GetRecName(string language, string mode) => PaddleOcrModels.GetRecName(language, mode);
 
-        return recName;
-    }
-
-    internal static string GetDetectionName(string language, string mode)
-    {
-        // Georgian is the one remaining PP-OCRv3 language.
-        if (language == "ka")
-        {
-            return "PP-OCRv3_mobile_det";
-        }
-
-        // Detector and recognition model come from the same PaddleOCR generation, which is
-        // how upstream pairs them (PP-OCRv6 languages get the v6 detector of the same tier).
-        return IsPpOcrV6Language(language)
-            ? $"PP-OCRv6_{PpOcrV6Tier(mode)}_det"
-            : $"PP-OCRv5_{mode}_det";
-    }
+    internal static string GetDetectionName(string language, string mode) => PaddleOcrModels.GetDetectionName(language, mode);
 
     internal static SKBitmap MakeTransparentBlack(SKBitmap bitmap)
     {
@@ -319,7 +184,7 @@ public partial class PaddleOcr
     {
         var detName = GetDetectionName(language, mode);
         var recName = GetRecName(language, mode);
-        _batchRightToLeft = ArabicLanguageCodes.Contains(language);
+        _batchRightToLeft = PaddleOcrModels.IsArabicScript(language);
         _batchProgress = progress;
         var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(folder);
