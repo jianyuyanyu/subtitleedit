@@ -185,6 +185,13 @@ public class SeTools
     public List<string> FindHistory { get; set; } = new List<string>();
     public bool AllowSingleLetterShortcutsInTextbox { get; set; }
 
+    /// <summary>
+    /// Let shortcuts bound to the text-navigation chords (Ctrl+Left/Right, Home/End with or
+    /// without Ctrl/Shift) fire while a text input has focus, instead of reserving those keys
+    /// for caret movement (#11357). Off by default; Settings.json only for now (#14654).
+    /// </summary>
+    public bool AllowTextNavigationShortcutsInTextbox { get; set; }
+
     // Auto-break (auto br) - defaults must match libse ToolsSettings
     public bool AutoBreakLineEndingEarly { get; set; } = false;
     public bool AutoBreakCommaBreakEarly { get; set; } = false;
@@ -265,6 +272,7 @@ public class SeTools
         MultipleReplaceShowDotDotDotButtons = true;
         GridFocusTextboxAfterInsertNew = true;
         AllowSingleLetterShortcutsInTextbox = false;
+        AllowTextNavigationShortcutsInTextbox = false;
         TextToSpeechPromptMergeContinuationLines = true;
         TextToSpeechPromptSkipNoiseLines = true;
         TextToSpeechPromptDetectSpeakers = true;
