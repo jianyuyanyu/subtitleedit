@@ -632,7 +632,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.StartOcrSelectedLinesCommand,
         };
-        menuItemOcrSelectedLines.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemOcrSelectedLines.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemOcrSelectedLines);
 
         var menuItemInspectMatchesForLine = new MenuItem
@@ -641,7 +641,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.InspectLineCommand,
         };
-        menuItemInspectMatchesForLine.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.IsInspectLineVisible)) { Mode = BindingMode.TwoWay });
+        menuItemInspectMatchesForLine.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.IsInspectLineVisible)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemInspectMatchesForLine);
 
         var menuItemShowImage = new MenuItem
@@ -650,7 +650,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ViewSelectedImageCommand,
         };
-        menuItemShowImage.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemShowImage.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemShowImage);
 
         var menuItemSaveImage = new MenuItem
@@ -659,7 +659,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.SaveImageAsCommand,
         };
-        menuItemSaveImage.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemSaveImage.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemSaveImage);
 
         var menuItemCopyImageToClipboard = new MenuItem
@@ -668,7 +668,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.CopyImageToClipboardCommand,
         };
-        menuItemCopyImageToClipboard.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemCopyImageToClipboard.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemCopyImageToClipboard);
 
         flyout.Items.Add(new Separator());
@@ -679,7 +679,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.DeleteSelectedLinesCommand,
         };
-        menuItemDelete.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemDelete.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemDelete);
 
         var menuItemFillSelectedLinesWithClipboard = new MenuItem
@@ -688,7 +688,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.FillSelectedLinesWithClipboardCommand,
         };
-        menuItemFillSelectedLinesWithClipboard.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.HasMultipleLinesSelected)) { Mode = BindingMode.TwoWay });
+        menuItemFillSelectedLinesWithClipboard.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.HasMultipleLinesSelected)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemFillSelectedLinesWithClipboard);
 
         flyout.Items.Add(new Separator());
@@ -699,7 +699,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ToggleItalicCommand,
         };
-        menuItemItalic.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemItalic.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemItalic);
 
         var menuItemBold = new MenuItem
@@ -708,7 +708,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ToggleBoldCommand,
         };
-        menuItemBold.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemBold.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemBold);
 
         flyout.Items.Add(new Separator());
@@ -719,7 +719,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ExportCurrentOcrItemsCommand,
         };
-        menuItemExport.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemExport.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemExport);
 
         var menuItemImportTextFromSubtitle = new MenuItem
@@ -728,7 +728,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ImportTextFromSubtitleCommand,
         };
-        menuItemImportTextFromSubtitle.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemImportTextFromSubtitle.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemImportTextFromSubtitle);
 
         var menuItemExportTextAsSubtitle = new MenuItem
@@ -737,7 +737,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.ExportTextAsSubtitleCommand,
         };
-        menuItemExportTextAsSubtitle.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemExportTextAsSubtitle.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemExportTextAsSubtitle);
 
         var menuItemSaveAllImagesWithHtmlIndex = new MenuItem
@@ -746,7 +746,7 @@ public class OcrWindow : Window
             DataContext = vm,
             Command = vm.SaveAllImagesWithHtmlIndexCommand,
         };
-        menuItemSaveAllImagesWithHtmlIndex.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.TwoWay });
+        menuItemSaveAllImagesWithHtmlIndex.Bind(Visual.IsVisibleProperty, new Binding(nameof(vm.ShowContextMenu)) { Mode = BindingMode.OneWay });
         flyout.Items.Add(menuItemSaveAllImagesWithHtmlIndex);
 
         flyout.Items.Add(new Separator());
