@@ -146,7 +146,7 @@ public class ShotChangesWindow : Window
         {
             Converter = new InverseBooleanConverter(),
             Source = vm,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
         var labelSensitivityValue = UiUtil.MakeLabel(string.Empty).WithBindText(vm, nameof(ShotChangesViewModel.Sensitivity), new DoubleToTwoDecimalConverter());
         var buttonGenerate = UiUtil.MakeButton(Se.Language.Video.ShotChanges.GenerateShotChangesWithFfmpeg, vm.GenerateShotChangesFfmpegCommand).WithBindEnabled(nameof(vm.IsGenerating), new InverseBooleanConverter());

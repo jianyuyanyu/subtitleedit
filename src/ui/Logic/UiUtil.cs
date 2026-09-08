@@ -826,7 +826,7 @@ public static class UiUtil
             comboBox.Bind(ComboBox.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -1001,7 +1001,7 @@ public static class UiUtil
             textBox.Bind(TextBox.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -1070,7 +1070,7 @@ public static class UiUtil
             textBlock.Bind(TextBlock.TextProperty, new Binding
             {
                 Path = textPropertyPath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -1079,7 +1079,7 @@ public static class UiUtil
             textBlock.Bind(TextBlock.IsVisibleProperty, new Binding
             {
                 Path = visibilityPropertyPath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -1194,7 +1194,7 @@ public static class UiUtil
         link.Bind(TextBlock.TextProperty, new Binding
         {
             Path = propertyTextPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return link;
@@ -1457,7 +1457,7 @@ public static class UiUtil
         control.Bind(Button.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1468,7 +1468,7 @@ public static class UiUtil
         control.Bind(SplitButton.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1479,7 +1479,7 @@ public static class UiUtil
         control.Bind(SplitButton.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1490,7 +1490,7 @@ public static class UiUtil
         control.Bind(ComboBox.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1501,7 +1501,7 @@ public static class UiUtil
         control.Bind(ComboBox.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1518,7 +1518,7 @@ public static class UiUtil
         control.Bind(NumericUpDown.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1529,7 +1529,7 @@ public static class UiUtil
         control.Bind(Button.ContentProperty, new Binding
         {
             Path = contentPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1540,7 +1540,7 @@ public static class UiUtil
         control.Bind(CheckBox.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1551,7 +1551,7 @@ public static class UiUtil
         control.Bind(TextBox.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1563,7 +1563,7 @@ public static class UiUtil
         {
             Converter = converter,
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1575,7 +1575,7 @@ public static class UiUtil
         {
             Converter = converter,
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1586,7 +1586,7 @@ public static class UiUtil
         control.Bind(TextBox.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1599,7 +1599,7 @@ public static class UiUtil
         {
             Converter = converter,
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1610,7 +1610,7 @@ public static class UiUtil
         control.Bind(Button.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1622,7 +1622,7 @@ public static class UiUtil
         control.Bind(Button.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1633,7 +1633,7 @@ public static class UiUtil
         control.Bind(Button.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = converter,
         });
 
@@ -1645,7 +1645,7 @@ public static class UiUtil
         control.Bind(Border.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = converter,
         });
 
@@ -1657,7 +1657,7 @@ public static class UiUtil
         control.Bind(Border.IsVisibleProperty, new Binding
         {
             Path = isVisiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1701,7 +1701,7 @@ public static class UiUtil
         control.Bind(Button.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -1712,7 +1712,7 @@ public static class UiUtil
         control.Bind(Button.IsEnabledProperty, new Binding
         {
             Path = isEnabledPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = converter,
         });
 
@@ -2168,7 +2168,7 @@ public static class UiUtil
         control.Bind(Visual.IsVisibleProperty, new Binding
         {
             Path = visibilityPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2421,7 +2421,7 @@ public static class UiUtil
             Label.IsVisibleProperty,
             CompiledBinding.Create(
                 isVisibleExpression,
-                mode: BindingMode.TwoWay
+                mode: BindingMode.OneWay
             )
         );
 
@@ -2562,7 +2562,7 @@ public static class UiUtil
             control.Bind(NumericUpDown.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -2606,7 +2606,7 @@ public static class UiUtil
             control.Bind(NumericUpDown.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -2647,7 +2647,7 @@ public static class UiUtil
             control.Bind(NumericUpDown.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -2686,7 +2686,7 @@ public static class UiUtil
             control.Bind(NumericUpDown.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -2726,7 +2726,7 @@ public static class UiUtil
             control.Bind(NumericUpDown.IsVisibleProperty, new Binding
             {
                 Path = propertyIsVisiblePath,
-                Mode = BindingMode.TwoWay,
+                Mode = BindingMode.OneWay,
             });
         }
 
@@ -2780,7 +2780,7 @@ public static class UiUtil
         control.Bind(Label.ContentProperty, new Binding
         {
             Path = contentPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2810,7 +2810,7 @@ public static class UiUtil
         control.Bind(Label.ContentProperty, new Binding
         {
             Path = contentPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = valueConverter,
         });
 
@@ -2832,7 +2832,7 @@ public static class UiUtil
         control.Bind(TextBlock.TextProperty, new Binding
         {
             Path = contentPropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2844,7 +2844,7 @@ public static class UiUtil
         control.Bind(Label.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2881,7 +2881,7 @@ public static class UiUtil
         control.Bind(Grid.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2893,7 +2893,7 @@ public static class UiUtil
         control.Bind(TextBlock.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2905,7 +2905,7 @@ public static class UiUtil
         control.Bind(TextBlock.IsEnabledProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2918,7 +2918,7 @@ public static class UiUtil
         control.Bind(Label.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = converter,
         });
 
@@ -2931,7 +2931,7 @@ public static class UiUtil
         control.Bind(StackPanel.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
         });
 
         return control;
@@ -2944,7 +2944,7 @@ public static class UiUtil
         control.Bind(StackPanel.IsVisibleProperty, new Binding
         {
             Path = visiblePropertyPath,
-            Mode = BindingMode.TwoWay,
+            Mode = BindingMode.OneWay,
             Converter = converter,
         });
 
