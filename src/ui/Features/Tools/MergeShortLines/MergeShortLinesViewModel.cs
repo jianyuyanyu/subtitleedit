@@ -8,6 +8,7 @@ using Nikse.SubtitleEdit.Features.Main;
 using Nikse.SubtitleEdit.Logic.Config;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Nikse.SubtitleEdit.Features.Tools.MergeShortLines;
 
@@ -88,6 +89,9 @@ public partial class MergeShortLinesViewModel : ObservableObject, IClosingCleanu
                 return; // must not overwrite the final result Ok() just computed
             }
 
+            var unapplied = new HashSet<(int Target, int Source)>(
+                Fixes.Where(f => !f.Apply).Select(f => (f.TargetLineIndex, f.SourceLineIndex)));
+
             Subtitles.Clear();
             AllSubtitlesFixed.Clear();
             Fixes.Clear();
@@ -116,24 +120,40 @@ public partial class MergeShortLinesViewModel : ObservableObject, IClosingCleanu
                     gapThresholdMs,
                     unbreakLinesShorterThan);
             }
-            
 
             AllSubtitlesFixed.AddRange(mergeResult.MergedSubtitles);
 
             foreach (var fix in mergeResult.Fixes)
             {
+                if (unapplied.Contains((fix.TargetLineIndex, fix.SourceLineIndex)))
+                {
+                    fix.Apply = false;
+                }
+                fix.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(MergeShortLinesItem.Apply))
+                    {
+                        UpdateFixesInfo();
+                    }
+                };
                 Fixes.Add(fix);
             }
 
-            if (mergeResult.MergeCount == 0)
-            {
-                FixesInfo = Se.Language.Tools.ApplyDurationLimits.NoChangesNeeded;
-            }
-            else
-            {
-                FixesInfo = string.Format(Se.Language.Tools.MergeShortLines.LinesMergedX, mergeResult.MergeCount);
-            }
+            UpdateFixesInfo();
         });
+    }
+
+    private void UpdateFixesInfo()
+    {
+        var appliedCount = Fixes.Count(f => f.Apply);
+        if (Fixes.Count == 0)
+        {
+            FixesInfo = Se.Language.Tools.ApplyDurationLimits.NoChangesNeeded;
+        }
+        else
+        {
+            FixesInfo = string.Format(Se.Language.Tools.MergeShortLines.LinesMergedX, appliedCount);
+        }
     }
 
     private void LoadSettings()
@@ -155,6 +175,36 @@ public partial class MergeShortLinesViewModel : ObservableObject, IClosingCleanu
     }
 
     [RelayCommand]
+    private void SelectAll()
+    {
+        foreach (var fix in Fixes)
+        {
+            fix.Apply = true;
+        }
+        UpdateFixesInfo();
+    }
+
+    [RelayCommand]
+    private void SelectNone()
+    {
+        foreach (var fix in Fixes)
+        {
+            fix.Apply = false;
+        }
+        UpdateFixesInfo();
+    }
+
+    [RelayCommand]
+    private void InvertSelection()
+    {
+        foreach (var fix in Fixes)
+        {
+            fix.Apply = !fix.Apply;
+        }
+        UpdateFixesInfo();
+    }
+
+    [RelayCommand]
     private void Ok()
     {
         if (Window == null)
@@ -169,13 +219,17 @@ public partial class MergeShortLinesViewModel : ObservableObject, IClosingCleanu
         {
             var gapThresholdMs = Se.Settings.Tools.BridgeGaps.BridgeGapsSmallerThanMs;
             var unbreakLinesShorterThan = Se.Settings.General.UnbreakLinesShorterThan;
+            var allowedSet = new HashSet<(int Target, int Source)>(
+                Fixes.Where(f => f.Apply).Select(f => (f.TargetLineIndex, f.SourceLineIndex)));
+
             var mergeResult = MergeShortLinesHelper.Merge(
                 _allSubtitles,
                 _shotChanges,
                 SingleLineMaxLength,
                 MaxNumberOfLines,
                 gapThresholdMs,
-                unbreakLinesShorterThan);
+                unbreakLinesShorterThan,
+                (tgt, src) => allowedSet.Contains((tgt, src)));
             AllSubtitlesFixed.Clear();
             AllSubtitlesFixed.AddRange(mergeResult.MergedSubtitles);
         }

@@ -1,4 +1,4 @@
-﻿using Nikse.SubtitleEdit.Core.Common;
+using Nikse.SubtitleEdit.Core.Common;
 using Nikse.SubtitleEdit.Features.Main;
 using Nikse.SubtitleEdit.Logic.Config;
 using System;
@@ -29,7 +29,8 @@ public static class MergeShortLinesHelper
         int singleLineMaxLength,
         int maxNumberOfLines,
         int gapThresholdMs,
-        int unbreakLinesShorterThan)
+        int unbreakLinesShorterThan,
+        Func<int, int, bool>? isMergeAllowed = null)
     {
         var fixes = new List<MergeShortLinesItem>();
         var mergeCount = 0;
@@ -46,6 +47,11 @@ public static class MergeShortLinesHelper
             while (j < subtitles.Count)
             {
                 var next = subtitles[j];
+
+                if (isMergeAllowed != null && !isMergeAllowed(index, j))
+                {
+                    break;
+                }
 
                 // stop if there is a shot change between current and next
                 var hasShotChangeBetween = shotChanges != null && shotChanges.Any(s =>
@@ -98,7 +104,9 @@ public static class MergeShortLinesHelper
                     Se.Language.Tools.MergeShortLines.Title,
                     index + 1,
                     string.Format(Se.Language.Tools.MergeShortLines.MergedLineInfo, j + 1, index + 1, current.Text.Replace(Environment.NewLine, " ⏎ ")),
-                    new SubtitleLineViewModel(current));
+                    new SubtitleLineViewModel(current),
+                    index,
+                    j);
                 fixes.Add(fix);
 
                 j++;
@@ -118,7 +126,8 @@ public static class MergeShortLinesHelper
         int singleLineMaxLength,
         int maxNumberOfLines,
         int gapThresholdMs,
-        int unbreakLinesShorterThan)
+        int unbreakLinesShorterThan,
+        Func<int, int, bool>? isMergeAllowed = null)
     {
         var fixes = new List<MergeShortLinesItem>();
         var mergeCount = 0;
@@ -138,6 +147,11 @@ public static class MergeShortLinesHelper
             while (j < subtitles.Count)
             {
                 var next = subtitles[j];
+
+                if (isMergeAllowed != null && !isMergeAllowed(index, j))
+                {
+                    break;
+                }
 
                 // stop if there is a shot change between current and next
                 var lastInGroup = mergeGroup[^1];
@@ -229,7 +243,9 @@ public static class MergeShortLinesHelper
                         Se.Language.Tools.MergeShortLines.Title,
                         index + k + 1,
                         $"Line {index + k + 1} - {highlightedVm.Text.Replace(Environment.NewLine, " ⏎ ")}",
-                        highlightedVm));
+                        highlightedVm,
+                        index,
+                        index + k));
                 }
             }
             else

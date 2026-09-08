@@ -1,11 +1,17 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Nikse.SubtitleEdit.Logic;
 using Nikse.SubtitleEdit.Logic.Config;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace Nikse.SubtitleEdit.Features.Tools.MergeShortLines;
 
@@ -130,13 +136,35 @@ public class MergeShortLinesWindow : Window
 
         // Sorting dropped in the DataGrid -> TableView conversion: the grid previews
         // merge candidates in subtitle order.
-        var dataGrid = TableViewExtras.MakeTableView(multiSelect: false);
+        var dataGrid = TableViewExtras.MakeTableView();
         dataGrid.Width = double.NaN;
         dataGrid.Height = double.NaN;
         dataGrid.DataContext = vm;
         dataGrid.ItemsSource = vm.Fixes;
         dataGrid.Columns.AddRange(new TableViewColumn[]
         {
+                new SeTableViewColumn
+                {
+                    Header = Se.Language.General.Apply,
+                    CellTheme = UiUtil.TableViewNoPaddingCellTheme,
+                    HeaderTheme = UiUtil.TableViewColumnHeaderTheme,
+                    CellTemplate = new FuncDataTemplate<MergeShortLinesItem>((item, _) =>
+                        new Border
+                        {
+                            Background = Brushes.Transparent, // Prevents highlighting
+                            Padding = new Thickness(4),
+                            Child = new CheckBox
+                            {
+                                Focusable = false,
+                                [!ToggleButton.IsCheckedProperty] = new Binding(nameof(MergeShortLinesItem.Apply))
+                                {
+                                    Mode = BindingMode.TwoWay,
+                                },
+                                HorizontalAlignment = HorizontalAlignment.Center,
+                            }
+                        }),
+                    Width = new GridLength(70),
+                },
                 new SeTableViewColumn
                 {
                     Header = Se.Language.General.NumberSymbol,
@@ -156,6 +184,40 @@ public class MergeShortLinesWindow : Window
                 },
         });
 
+        // Space toggles the checkbox of every selected row
+        TableViewExtras.AddSpaceToggle<MergeShortLinesItem>(dataGrid,
+            item => item.Apply,
+            (item, value) => item.Apply = value);
+
+        var commandModifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        dataGrid.ContextMenu = new ContextMenu
+        {
+            Items =
+            {
+                new MenuItem
+                {
+                    Header = Se.Language.General.SelectAll,
+                    DataContext = vm,
+                    Command = vm.SelectAllCommand,
+                    InputGesture = new KeyGesture(Key.A, commandModifier),
+                },
+                new MenuItem
+                {
+                    Header = Se.Language.General.SelectNone,
+                    DataContext = vm,
+                    Command = vm.SelectNoneCommand,
+                    InputGesture = new KeyGesture(Key.D, commandModifier),
+                },
+                new MenuItem
+                {
+                    Header = Se.Language.General.InvertSelection,
+                    DataContext = vm,
+                    Command = vm.InvertSelectionCommand,
+                    InputGesture = new KeyGesture(Key.I, commandModifier | KeyModifiers.Shift),
+                },
+            },
+        };
+
         dataGrid.AddHandler(InputElement.KeyDownEvent, (object? _, KeyEventArgs e) =>
         {
             if (e.Key is Key.Home or Key.End && dataGrid.ItemsSource is IList items && items.Count > 0)
@@ -173,3 +235,4 @@ public class MergeShortLinesWindow : Window
         return grid;
     }
 }
+
