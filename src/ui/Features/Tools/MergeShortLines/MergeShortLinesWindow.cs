@@ -11,7 +11,6 @@ using Nikse.SubtitleEdit.Logic;
 using Nikse.SubtitleEdit.Logic.Config;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace Nikse.SubtitleEdit.Features.Tools.MergeShortLines;
 
@@ -160,6 +159,8 @@ public class MergeShortLinesWindow : Window
                                 {
                                     Mode = BindingMode.TwoWay,
                                 },
+                                // The first line of a highlighted group is merged into, not merged: no checkbox.
+                                [!Visual.IsVisibleProperty] = new Binding(nameof(MergeShortLinesItem.CanToggle)),
                                 HorizontalAlignment = HorizontalAlignment.Center,
                             }
                         }),
@@ -186,8 +187,14 @@ public class MergeShortLinesWindow : Window
 
         // Space toggles the checkbox of every selected row
         TableViewExtras.AddSpaceToggle<MergeShortLinesItem>(dataGrid,
-            item => item.Apply,
-            (item, value) => item.Apply = value);
+            item => !item.CanToggle || item.Apply,
+            (item, value) =>
+            {
+                if (item.CanToggle)
+                {
+                    item.Apply = value;
+                }
+            });
 
         var commandModifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
         dataGrid.ContextMenu = new ContextMenu
@@ -218,6 +225,16 @@ public class MergeShortLinesWindow : Window
             },
         };
 
+        // The context menu gestures must mean the same with the grid focused, so take them
+        // before the TableView (a ListBox) turns Ctrl+A into "select all rows".
+        dataGrid.AddHandler(InputElement.KeyDownEvent, (object? _, KeyEventArgs e) =>
+        {
+            if (vm.HandleFixesSelectionKey(e))
+            {
+                e.Handled = true;
+            }
+        }, RoutingStrategies.Tunnel);
+
         dataGrid.AddHandler(InputElement.KeyDownEvent, (object? _, KeyEventArgs e) =>
         {
             if (e.Key is Key.Home or Key.End && dataGrid.ItemsSource is IList items && items.Count > 0)
@@ -235,4 +252,3 @@ public class MergeShortLinesWindow : Window
         return grid;
     }
 }
-
