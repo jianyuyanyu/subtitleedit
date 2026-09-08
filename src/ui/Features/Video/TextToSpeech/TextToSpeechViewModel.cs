@@ -97,7 +97,6 @@ public partial class TextToSpeechViewModel : ObservableObject
     [ObservableProperty] private bool _doGenerateVideoFile;
     [ObservableProperty] private bool _isEdgeTtsEngine;
     [ObservableProperty] private bool _isGenerating;
-    [ObservableProperty] private bool _isNotGenerating;
     [ObservableProperty] private bool _isEngineSettingsVisible;
     [ObservableProperty] private bool _isModelDownloadVisible;
     [ObservableProperty] private string _progressText;
@@ -187,7 +186,6 @@ public partial class TextToSpeechViewModel : ObservableObject
         IsVoiceTestEnabled = true;
         IsVoiceComboEnabled = true;
         IsGenerating = false;
-        IsNotGenerating = true;
         KeyFile = string.Empty;
         Instruction = string.Empty;
         CastButtonText = Se.Language.Video.TextToSpeech.SetupCast;
@@ -1012,7 +1010,6 @@ public partial class TextToSpeechViewModel : ObservableObject
         _cancellationTokenSource = new CancellationTokenSource();
         _cancellationToken = _cancellationTokenSource.Token;
         IsGenerating = false;
-        IsNotGenerating = true;
         IsEngineSettingsVisible = false;
         IsModelDownloadVisible = false;
         ProgressText = string.Empty;
@@ -1470,7 +1467,6 @@ public partial class TextToSpeechViewModel : ObservableObject
         ProgressEtaText = string.Empty;
         _generateStopwatch.Restart();
         IsGenerating = true;
-        IsNotGenerating = false;
         ProgressOpacity = 1.0;
         SaveSettings();
 
@@ -1571,7 +1567,6 @@ public partial class TextToSpeechViewModel : ObservableObject
         ProgressPercentText = string.Empty;
         ProgressEtaText = string.Empty;
         IsGenerating = false;
-        IsNotGenerating = true;
         ProgressOpacity = 0;
     }
 
@@ -2201,7 +2196,6 @@ public partial class TextToSpeechViewModel : ObservableObject
             ProgressPercentText = string.Empty;
             ProgressEtaText = string.Empty;
             IsGenerating = true;
-            IsNotGenerating = false;
             ProgressOpacity = 1.0;
 
             try
@@ -2407,7 +2401,6 @@ public partial class TextToSpeechViewModel : ObservableObject
         }
 
         IsGenerating = false;
-        IsNotGenerating = true;
         ProgressOpacity = 0;
         OkPressed = true;
 
@@ -2436,7 +2429,6 @@ public partial class TextToSpeechViewModel : ObservableObject
             }
 
             IsGenerating = false;
-            IsNotGenerating = true;
             ProgressOpacity = 0;
             return;
         }
