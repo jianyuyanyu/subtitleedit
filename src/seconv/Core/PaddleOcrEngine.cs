@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Nikse.SubtitleEdit.Core.Common;
 using SkiaSharp;
 
 namespace SeConv.Core;
@@ -186,8 +187,6 @@ internal sealed class PaddleOcrEngine : IOcrEngine
     /// <summary>Upper bound for one paddleocr run (model load + one image).</summary>
     internal static readonly TimeSpan ProcessTimeout = TimeSpan.FromMinutes(10);
 
-    private const string TextlineOrientationModelName = "PP-LCNet_x1_0_textline_ori";
-
     /// <summary>
     /// Command line for one image. The standalone install gets the GUI's full argument set
     /// with explicit model folders (it has no model download of its own); a PATH install
@@ -204,8 +203,9 @@ internal sealed class PaddleOcrEngine : IOcrEngine
             return args;
         }
 
-        var detName = GetDetectionName(Language);
-        var recName = GetRecName(Language);
+        // "server" = the PP-OCRv6 medium tier, the more accurate of the two bundled sizes.
+        var detName = PaddleOcrModels.GetDetectionName(Language, "server");
+        var recName = PaddleOcrModels.GetRecName(Language, "server");
         args.AddRange(new[]
         {
             "--use_textline_orientation", "true",
@@ -215,64 +215,10 @@ internal sealed class PaddleOcrEngine : IOcrEngine
             "--text_detection_model_name", detName,
             "--text_recognition_model_dir", Path.Combine(modelsFolder, "rec", recName),
             "--text_recognition_model_name", recName,
-            "--textline_orientation_model_dir", Path.Combine(modelsFolder, "cls", TextlineOrientationModelName),
-            "--textline_orientation_model_name", TextlineOrientationModelName,
+            "--textline_orientation_model_dir", Path.Combine(modelsFolder, "cls", PaddleOcrModels.TextlineOrientationModelName),
+            "--textline_orientation_model_name", PaddleOcrModels.TextlineOrientationModelName,
         });
         return args;
-    }
-
-    // Script groups mirror PaddleOCR 3.7 (paddleocr/_utils/langs.py) and the GUI's
-    // PaddleOcr.GetRecName/GetDetectionName - only the models in the bundled
-    // "PaddleOCR.PP-OCRv6.support.files" archive exist on disk, so the mapping must stay in sync.
-    private static readonly HashSet<string> LatinLanguageCodes = new()
-    {
-        "af", "az", "bs", "ca", "cs", "cy", "da", "de", "es", "et", "eu",
-        "fi", "fr", "ga", "gl", "hr", "hu", "id", "is", "it", "ku", "la",
-        "lb", "lt", "lv", "mi", "ms", "mt", "nl", "no", "oc", "pi", "pl",
-        "pt", "qu", "rm", "ro", "rs_latin", "sk", "sl", "sq", "sv", "sw",
-        "tl", "tr", "uz", "vi", "french", "german"
-    };
-
-    private static readonly HashSet<string> ArabicLanguageCodes = new() { "ar", "bal", "fa", "ps", "sd", "ug", "ur" };
-    private static readonly HashSet<string> EslavLanguageCodes = new() { "ru", "be", "uk" };
-
-    private static readonly HashSet<string> CyrillicLanguageCodes = new()
-    {
-        "rs_cyrillic", "bg", "mn", "abq", "ady", "kbd", "ava", "dar",
-        "inh", "che", "lbe", "lez", "tab", "ba", "bua", "cv", "kaa",
-        "kk", "kv", "ky", "mhr", "mk", "mo", "os", "sah", "tg", "tt",
-        "tyv", "udm", "xal"
-    };
-
-    private static readonly HashSet<string> DevanagariLanguageCodes = new()
-    {
-        "hi", "mr", "ne", "bh", "mai", "ang", "bho", "mah", "sck", "new", "gom", "bgc", "sa"
-    };
-
-    private static readonly HashSet<string> OwnModelLanguageCodes = new() { "el", "ta", "te", "th" };
-
-    // Pali is the one Latin language PP-OCRv6 does not cover.
-    private static bool IsPpOcrV6Language(string language) =>
-        language is "ch" or "chinese_cht" or "en" or "japan" ||
-        (LatinLanguageCodes.Contains(language) && language != "pi");
-
-    internal static string GetRecName(string language)
-    {
-        if (IsPpOcrV6Language(language)) return "PP-OCRv6_medium_rec";
-        if (ArabicLanguageCodes.Contains(language)) return "arabic_PP-OCRv5_mobile_rec";
-        if (EslavLanguageCodes.Contains(language)) return "eslav_PP-OCRv5_mobile_rec";
-        if (CyrillicLanguageCodes.Contains(language)) return "cyrillic_PP-OCRv5_mobile_rec";
-        if (DevanagariLanguageCodes.Contains(language)) return "devanagari_PP-OCRv5_mobile_rec";
-        if (language == "korean") return "korean_PP-OCRv5_mobile_rec";
-        if (OwnModelLanguageCodes.Contains(language)) return $"{language}_PP-OCRv5_mobile_rec";
-        if (language == "ka") return "ka_PP-OCRv3_mobile_rec"; // no PP-OCRv5 model for Georgian yet
-        return "latin_PP-OCRv5_mobile_rec"; // Pali + safety net for unknown codes
-    }
-
-    internal static string GetDetectionName(string language)
-    {
-        if (language == "ka") return "PP-OCRv3_mobile_det";
-        return IsPpOcrV6Language(language) ? "PP-OCRv6_medium_det" : "PP-OCRv5_server_det";
     }
 
     /// <summary>
