@@ -1,4 +1,4 @@
-﻿using Avalonia.Input;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using Nikse.SubtitleEdit.Logic.Config;
 using System;
@@ -262,6 +262,8 @@ public class ShortcutManager : IShortcutManager
             Key.LeftAlt or Key.RightAlt or
             Key.LWin or Key.RWin or Key.NumLock))
         {
+            _activeKeys.Clear();
+            _activeKeyNames.Clear();
             _activeKeys.Add(key);
             _activeKeyNames.Add(GetShortcutKeyName(e));
         }
@@ -425,11 +427,23 @@ public class ShortcutManager : IShortcutManager
         // Build the current state key list with initial capacity. Read from the
         // physical-key-aware name set so numpad keys hash distinctly from their
         // main-keyboard counterparts.
-        var currentInputKeys = new List<string>(_activeKeyNames.Count + 2);
+        var currentInputKeys = new List<string>(_activeKeyNames.Count + 4);
+        var currentKeyName = GetShortcutKeyName(keyEventArgs);
+        var isModifierKey = keyEventArgs.Key is (Key.LeftCtrl or Key.RightCtrl or
+            Key.LeftShift or Key.RightShift or
+            Key.LeftAlt or Key.RightAlt or
+            Key.LWin or Key.RWin or Key.NumLock);
 
-        foreach (var keyName in _activeKeyNames)
+        if (!isModifierKey && !string.IsNullOrEmpty(currentKeyName))
         {
-            currentInputKeys.Add(keyName);
+            currentInputKeys.Add(currentKeyName);
+        }
+        else
+        {
+            foreach (var keyName in _activeKeyNames)
+            {
+                currentInputKeys.Add(keyName);
+            }
         }
 
         // Add normalized modifiers based on the event state

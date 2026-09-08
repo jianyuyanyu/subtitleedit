@@ -1,4 +1,4 @@
-﻿using Nikse.SubtitleEdit.UiLogic.Export;
+using Nikse.SubtitleEdit.UiLogic.Export;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -20806,6 +20806,10 @@ public partial class MainViewModel :
         {
             var preIndex = SelectedSubtitleIndex ?? 0;
             var preRowTop = GetSelectedRowViewportTop();
+            var preGridFocus = IsSubtitleGridFocused();
+            var preEditBoxFocus = EditTextBox.IsFocused;
+            var preEditBoxOriginalFocus = EditTextBoxOriginal.IsFocused;
+            var preAudioFocus = AudioVisualizer != null && AudioVisualizer.IsFocused;
 
             var undoRedoObject = _undoRedoManager.Undo()!;
             if (undoRedoObject?.Subtitles == null)
@@ -20814,7 +20818,21 @@ public partial class MainViewModel :
             }
 
             RestoreUndoRedoState(undoRedoObject, scrollToSelected: false);
-            RestoreSelectionToPreviousIndex(preIndex, preRowTop);
+            RestoreSelectionToPreviousIndex(preIndex, preRowTop, restoreGridFocus: preGridFocus || (!preEditBoxFocus && !preEditBoxOriginalFocus && !preAudioFocus));
+
+            if (preEditBoxFocus)
+            {
+                Dispatcher.UIThread.Post(() => EditTextBox.Focus());
+            }
+            else if (preEditBoxOriginalFocus)
+            {
+                Dispatcher.UIThread.Post(() => EditTextBoxOriginal.Focus());
+            }
+            else if (preAudioFocus)
+            {
+                Dispatcher.UIThread.Post(() => AudioVisualizer?.Focus());
+            }
+
             ShowUndoStatus();
         });
     }
@@ -20854,6 +20872,10 @@ public partial class MainViewModel :
         {
             var preIndex = SelectedSubtitleIndex ?? 0;
             var preRowTop = GetSelectedRowViewportTop();
+            var preGridFocus = IsSubtitleGridFocused();
+            var preEditBoxFocus = EditTextBox.IsFocused;
+            var preEditBoxOriginalFocus = EditTextBoxOriginal.IsFocused;
+            var preAudioFocus = AudioVisualizer != null && AudioVisualizer.IsFocused;
 
             var undoRedoObject = _undoRedoManager.Redo();
             if (undoRedoObject?.Subtitles == null)
@@ -20862,7 +20884,21 @@ public partial class MainViewModel :
             }
 
             RestoreUndoRedoState(undoRedoObject, scrollToSelected: false);
-            RestoreSelectionToPreviousIndex(preIndex, preRowTop);
+            RestoreSelectionToPreviousIndex(preIndex, preRowTop, restoreGridFocus: preGridFocus || (!preEditBoxFocus && !preEditBoxOriginalFocus && !preAudioFocus));
+
+            if (preEditBoxFocus)
+            {
+                Dispatcher.UIThread.Post(() => EditTextBox.Focus());
+            }
+            else if (preEditBoxOriginalFocus)
+            {
+                Dispatcher.UIThread.Post(() => EditTextBoxOriginal.Focus());
+            }
+            else if (preAudioFocus)
+            {
+                Dispatcher.UIThread.Post(() => AudioVisualizer?.Focus());
+            }
+
             ShowRedoStatus();
         });
     }
@@ -20890,14 +20926,14 @@ public partial class MainViewModel :
     /// the current line at the top of the grid on every Undo - disorienting when the user was
     /// working near the bottom of the view (#14517).
     /// </summary>
-    private void RestoreSelectionToPreviousIndex(int preIndex, double? preRowTop = null)
+    private void RestoreSelectionToPreviousIndex(int preIndex, double? preRowTop = null, bool? restoreGridFocus = null)
     {
         if (Subtitles.Count == 0)
         {
             return;
         }
 
-        SelectAndScrollToRow(Math.Clamp(preIndex, 0, Subtitles.Count - 1), null, keepRowViewportTop: preRowTop);
+        SelectAndScrollToRow(Math.Clamp(preIndex, 0, Subtitles.Count - 1), null, restoreGridFocus: restoreGridFocus, keepRowViewportTop: preRowTop);
     }
 
     public UndoRedoItem MakeUndoRedoObject(string description)
@@ -28023,8 +28059,13 @@ public partial class MainViewModel :
     private bool IsSubtitleGridFocused()
     {
         var focusedElement = Window?.FocusManager?.GetFocusedElement();
-        if (focusedElement == null)
+        if (focusedElement == null || focusedElement == Window || focusedElement is LayoutTransformControl || focusedElement is MainView)
         {
+            if (!IsTextInputFocused() && (AudioVisualizer == null || !AudioVisualizer.IsFocused) && !IsMainMenuFocused())
+            {
+                return true;
+            }
+
             return false;
         }
 
