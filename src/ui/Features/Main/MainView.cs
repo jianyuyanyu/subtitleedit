@@ -64,7 +64,7 @@ public class MainView : ViewBase
             };
             _vm.Window.Closed += (_, _) => _vm.StopBackgroundWork();
 
-            AttachKeyHandlers(hostWindow);
+            AttachKeyHandlers(hostWindow, _vm);
 
             // Clipboard-manager compatibility (Ditto, CopyQ, ClipClip, ...) - see the
             // hook for what it intercepts and why (#13822).
@@ -126,10 +126,6 @@ public class MainView : ViewBase
                 _vm.ContentGrid.InvalidateMeasure();
                 _vm.ContentGrid.InvalidateArrange();
                 Dispatcher.UIThread.Post(() => TableViewExtras.FocusRow(_vm.SubtitleGrid));
-                if (TopLevel.GetTopLevel(this) is Window w)
-                {
-                    AttachKeyHandlers(w);
-                }
             }, DispatcherPriority.Loaded);
         };
 
@@ -138,18 +134,19 @@ public class MainView : ViewBase
         return root;
     }
 
-    private bool _keyHandlersAttached;
-    private void AttachKeyHandlers(Window window)
+    /// <summary>
+    /// Key and pointer handlers live on the window rather than on this control so shortcuts
+    /// keep working when focus lands outside the user control (window root, layout host).
+    /// </summary>
+    private static void AttachKeyHandlers(Window window, MainViewModel vm)
     {
-        if (_keyHandlersAttached || _vm == null)
-        {
-            return;
-        }
+        window.AddHandler(KeyDownEvent, vm.OnKeyDownHandler, RoutingStrategies.Tunnel, handledEventsToo: false);
+        window.AddHandler(KeyUpEvent, vm.OnKeyUpHandler, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
 
-        window.AddHandler(KeyDownEvent, _vm.OnKeyDownHandler, RoutingStrategies.Tunnel, handledEventsToo: false);
-        window.AddHandler(KeyUpEvent, _vm.OnKeyUpHandler, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
-        window.AddHandler(PointerPressedEvent, _vm.OnPointerPressedHandler, RoutingStrategies.Tunnel, handledEventsToo: true);
-        _keyHandlersAttached = true;
+        // Tunnelling, and handledEventsToo since controls like the waveform mark their presses handled:
+        // needed to see that Alt was held for a mouse gesture and cancel the menu-bar activation that
+        // would otherwise fire on the Alt release (discussion #11744).
+        window.AddHandler(PointerPressedEvent, vm.OnPointerPressedHandler, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     // Whether the window has seen (and passed through) an Alt key-down whose release is still

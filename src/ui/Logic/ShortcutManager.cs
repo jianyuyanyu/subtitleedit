@@ -1,4 +1,4 @@
-using Avalonia.Input;
+﻿using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using Nikse.SubtitleEdit.Logic.Config;
 using System;
@@ -262,6 +262,9 @@ public class ShortcutManager : IShortcutManager
             Key.LeftAlt or Key.RightAlt or
             Key.LWin or Key.RWin or Key.NumLock))
         {
+            // Only the most recent non-modifier key counts: a key-up can be lost when a
+            // shortcut moves focus (e.g. undo reloading the grid), and a stale key would
+            // otherwise block every following chord until the user releases everything.
             _activeKeys.Clear();
             _activeKeyNames.Clear();
             _activeKeys.Add(key);
@@ -427,23 +430,11 @@ public class ShortcutManager : IShortcutManager
         // Build the current state key list with initial capacity. Read from the
         // physical-key-aware name set so numpad keys hash distinctly from their
         // main-keyboard counterparts.
-        var currentInputKeys = new List<string>(_activeKeyNames.Count + 4);
-        var currentKeyName = GetShortcutKeyName(keyEventArgs);
-        var isModifierKey = keyEventArgs.Key is (Key.LeftCtrl or Key.RightCtrl or
-            Key.LeftShift or Key.RightShift or
-            Key.LeftAlt or Key.RightAlt or
-            Key.LWin or Key.RWin or Key.NumLock);
+        var currentInputKeys = new List<string>(_activeKeyNames.Count + 2);
 
-        if (!isModifierKey && !string.IsNullOrEmpty(currentKeyName))
+        foreach (var keyName in _activeKeyNames)
         {
-            currentInputKeys.Add(currentKeyName);
-        }
-        else
-        {
-            foreach (var keyName in _activeKeyNames)
-            {
-                currentInputKeys.Add(keyName);
-            }
+            currentInputKeys.Add(keyName);
         }
 
         // Add normalized modifiers based on the event state
