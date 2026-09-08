@@ -802,53 +802,9 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
             var extension = LibSEIntegration.GetExtensionForFormat(settings.Format);
             var formatDisplay = $"{normalizedFormat} (*{extension})";
 
-            var table = new Table();
-            table.AddColumn("[yellow]Parameter[/]");
-            table.AddColumn("[green]Value[/]");
-            table.AddRow("Pattern", string.Join(", ", settings.Pattern));
-            table.AddRow("Format", formatDisplay);
-
-            if (!string.IsNullOrEmpty(settings.InputFolder))
-                table.AddRow("Input Folder", settings.InputFolder);
-
-            if (!string.IsNullOrEmpty(settings.OutputFolder))
-                table.AddRow("Output Folder", settings.OutputFolder);
-
-            if (settings.Fps.HasValue)
-                table.AddRow("FPS", settings.Fps.Value.ToString());
-
-            if (settings.TargetFps.HasValue)
-                table.AddRow("Target FPS", settings.TargetFps.Value.ToString());
-
-            if (!string.IsNullOrEmpty(settings.Encoding))
-                table.AddRow("Encoding", settings.Encoding);
-
-            if (string.IsNullOrEmpty(settings.Encoding) && !string.IsNullOrEmpty(settings.InputEncodingFallback))
-                table.AddRow("Input encoding fallback", settings.InputEncodingFallback);
-
-            if (operations.Count > 0)
-                table.AddRow("Operations", string.Join(", ", operations));
-
-            if (!string.IsNullOrWhiteSpace(settings.TranslateTo))
-            {
-                var translateEngine = string.IsNullOrWhiteSpace(settings.TranslateEngine) ? "llamacpp" : settings.TranslateEngine.Trim().ToLowerInvariant();
-                var translateFrom = string.IsNullOrWhiteSpace(settings.TranslateFrom) ? "auto" : settings.TranslateFrom;
-                var customPrompt = string.IsNullOrWhiteSpace(settings.TranslatePrompt) ? string.Empty : ", custom prompt";
-                table.AddRow("Translate", $"{translateFrom} -> {settings.TranslateTo} ({translateEngine}{customPrompt})");
-            }
-
-            if (settings.DeleteFirst.HasValue)
-                table.AddRow("Delete First", settings.DeleteFirst.Value.ToString());
-
-            if (settings.DeleteLast.HasValue)
-                table.AddRow("Delete Last", settings.DeleteLast.Value.ToString());
-
-            if (!string.IsNullOrEmpty(settings.DeleteContains))
-                table.AddRow("Delete Contains", settings.DeleteContains);
-
             if (!silent)
             {
-                AnsiConsole.Write(table);
+                AnsiConsole.Write(BuildSummaryTable(settings, operations, formatDisplay));
                 AnsiConsole.WriteLine();
             }
 
@@ -940,6 +896,65 @@ internal sealed class ConvertCommand : AsyncCommand<ConvertCommand.Settings>
             }
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Builds the "Parameter / Value" table shown before a conversion. Every user-supplied
+    /// value is escaped: Spectre parses table cells as markup, so an unescaped path such as
+    /// "input [test].json" threw "Could not find color or style 'test'" (issue #14692).
+    /// </summary>
+    internal static Table BuildSummaryTable(Settings settings, IReadOnlyList<string> operations, string formatDisplay)
+    {
+        var table = new Table();
+        table.AddColumn("[yellow]Parameter[/]");
+        table.AddColumn("[green]Value[/]");
+        AddRow(table, "Pattern", string.Join(", ", settings.Pattern));
+        AddRow(table, "Format", formatDisplay);
+
+        if (!string.IsNullOrEmpty(settings.InputFolder))
+            AddRow(table, "Input Folder", settings.InputFolder);
+
+        if (!string.IsNullOrEmpty(settings.OutputFolder))
+            AddRow(table, "Output Folder", settings.OutputFolder);
+
+        if (settings.Fps.HasValue)
+            AddRow(table, "FPS", settings.Fps.Value.ToString());
+
+        if (settings.TargetFps.HasValue)
+            AddRow(table, "Target FPS", settings.TargetFps.Value.ToString());
+
+        if (!string.IsNullOrEmpty(settings.Encoding))
+            AddRow(table, "Encoding", settings.Encoding);
+
+        if (string.IsNullOrEmpty(settings.Encoding) && !string.IsNullOrEmpty(settings.InputEncodingFallback))
+            AddRow(table, "Input encoding fallback", settings.InputEncodingFallback);
+
+        if (operations.Count > 0)
+            AddRow(table, "Operations", string.Join(", ", operations));
+
+        if (!string.IsNullOrWhiteSpace(settings.TranslateTo))
+        {
+            var translateEngine = string.IsNullOrWhiteSpace(settings.TranslateEngine) ? "llamacpp" : settings.TranslateEngine.Trim().ToLowerInvariant();
+            var translateFrom = string.IsNullOrWhiteSpace(settings.TranslateFrom) ? "auto" : settings.TranslateFrom;
+            var customPrompt = string.IsNullOrWhiteSpace(settings.TranslatePrompt) ? string.Empty : ", custom prompt";
+            AddRow(table, "Translate", $"{translateFrom} -> {settings.TranslateTo} ({translateEngine}{customPrompt})");
+        }
+
+        if (settings.DeleteFirst.HasValue)
+            AddRow(table, "Delete First", settings.DeleteFirst.Value.ToString());
+
+        if (settings.DeleteLast.HasValue)
+            AddRow(table, "Delete Last", settings.DeleteLast.Value.ToString());
+
+        if (!string.IsNullOrEmpty(settings.DeleteContains))
+            AddRow(table, "Delete Contains", settings.DeleteContains);
+
+        return table;
+    }
+
+    private static void AddRow(Table table, string name, string value)
+    {
+        table.AddRow(new Text(name), new Text(value));
     }
 
     /// <summary>
