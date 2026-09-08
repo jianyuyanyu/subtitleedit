@@ -3,6 +3,33 @@ Subtitle Edit Changelog
 
 -----------------------------------------------------------------------------------------------------
 
+v5.2.0-rc6 (8th of September 2026)
+
+* Add option to show the original subtitle on the waveform - thx pdjdev
+* Add "remember window size and position" to the Matroska/MP4/transport stream/VobSub track pickers
+* Add --override-position and --output-filename-append to seconv
+* Tesseract OCR: add SE 4's 10 px margin and resize retry passes, and merge the retry word-wise - thx andor1999
+* OCR fix engine: straighten typographic apostrophes, keep "didn't" as one word, and capitalize a line after a finished sentence
+* Compare: keep the word-level diff marking in the HTML export
+* Batch convert: convert every teletext page per PID in transport streams
+* seconv: use the GUI's PaddleOCR install and add a run timeout - thx tekk42
+* FireRedTTS3: require the reference transcript instead of generating noise - thx invio-a11y
+* Fix "Undo" unexpectedly removing the original subtitle - thx Surlime
+* Fix subtitle numbering after batch OCR - thx tekk42
+* Fix Qwen3 ASR CPP cue segmentation (break on sentence punctuation, no spaces in CJK) - thx tuming2025/TheOriginalNedKelly
+* Fix memory leaks in video preview dialogs, row handlers, spectrogram and auto-backup
+* Faster subtitle format detection, "convert colors to dialog", CJK character counts and more
+* Update llama.cpp to b10840
+* Update Bulgarian translation - thx jekovcar
+* Update Central Kurdish translation - thx dkakaie
+* Update Chinese (Traditional) translation - thx love80312
+* Update German translation - thx FunkyKnilch
+* Update Hungarian translation - thx Zityi
+* Update Japanese translation - thx hisui3393
+* Update Russian translation - thx jekovcar
+
+-----------------------------------------------------------------------------------------------------
+
 v5.2.0-rc5 (7th of September 2026)
 
 * Add FireRedTTS3-Base as an audio.cpp text to speech engine (zero-shot voice cloning in 24 languages)
