@@ -151,6 +151,50 @@ public class Qwen3AsrWordSegmenterTests
     }
 
     [Fact]
+    public void OpeningMark_AfterSentenceBreak_StartsTheNextCue()
+    {
+        var words = new List<Qwen3AsrWord>
+        {
+            W("你", 0.0, 0.2), W("好", 0.2, 0.4), W("。", 0.4, 0.4),
+            W("「", 0.5, 0.5), W("我", 0.5, 0.7), W("来", 0.7, 0.9), W("了", 0.9, 1.1), W("。", 1.1, 1.1), W("」", 1.1, 1.2),
+        };
+
+        var subtitle = Qwen3AsrWordSegmenter.BuildSubtitle(words);
+
+        Assert.Equal(new[] { "你好。", "「我来了。」" }, subtitle.Paragraphs.Select(p => p.Text));
+        Assert.Equal(400, subtitle.Paragraphs[0].EndTime.TotalMilliseconds);
+        Assert.Equal(500, subtitle.Paragraphs[1].StartTime.TotalMilliseconds);
+    }
+
+    [Fact]
+    public void DialogDash_AfterSentenceBreak_StartsTheNextCue()
+    {
+        var words = new List<Qwen3AsrWord>
+        {
+            W("-", 0.0, 0.0), W("Hi.", 0.0, 0.3),
+            W("-", 0.5, 0.5), W("Hello.", 0.5, 0.9),
+        };
+
+        var subtitle = Qwen3AsrWordSegmenter.BuildSubtitle(words);
+
+        Assert.Equal(new[] { "- Hi.", "- Hello." }, subtitle.Paragraphs.Select(p => p.Text));
+    }
+
+    [Fact]
+    public void OpeningCurlyQuote_AfterSentenceBreak_StartsTheNextCue()
+    {
+        var words = new List<Qwen3AsrWord>
+        {
+            W("He", 0.0, 0.2), W("said.", 0.2, 0.4),
+            W("“", 0.5, 0.5), W("Go", 0.5, 0.7), W("home.", 0.7, 0.9), W("”", 0.9, 1.0),
+        };
+
+        var subtitle = Qwen3AsrWordSegmenter.BuildSubtitle(words);
+
+        Assert.Equal(new[] { "He said.", "“Go home.”" }, subtitle.Paragraphs.Select(p => p.Text));
+    }
+
+    [Fact]
     public void NewlineInsideToken_ForcesBreak()
     {
         var words = new List<Qwen3AsrWord>

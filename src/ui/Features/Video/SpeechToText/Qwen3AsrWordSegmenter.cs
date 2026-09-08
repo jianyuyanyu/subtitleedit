@@ -41,6 +41,7 @@ public static class Qwen3AsrWordSegmenter
     private const string ClauseTerminators = ",;:，、；：";
     private const string ClosingMarks = "\"'”’)]】」』）";
     private const string NoSpaceBefore = ".,!?;:%)]}」』】）…" + "，。！？、；：";
+    private const string NoSpaceAfter = "“‘([{「『【（《〈¿¡";
 
     public static Subtitle BuildSubtitle(IReadOnlyList<Qwen3AsrWord> words, int maxCharsLatin = DefaultMaxCharsLatin, int maxCharsCjk = DefaultMaxCharsCjk)
     {
@@ -72,10 +73,11 @@ public static class Qwen3AsrWordSegmenter
             var breakAfter = raw.Contains('\n');
 
             var isPunctuationOnly = IsPunctuationOnly(token);
-            if (text.Length == 0 && isPunctuationOnly && subtitle.Paragraphs.Count > 0)
+            if (text.Length == 0 && isPunctuationOnly && subtitle.Paragraphs.Count > 0 && ClosesText(token))
             {
-                // A stray mark right after a sentence break (e.g. a closing quote emitted as
-                // its own token) belongs to the cue that was just closed, not to a new one.
+                // A stray closing mark right after a sentence break (e.g. a closing quote emitted
+                // as its own token) belongs to the cue that was just closed, not to a new one.
+                // An opening mark or a dialog dash ("「", "“", "-") opens the next cue instead.
                 var last = subtitle.Paragraphs[subtitle.Paragraphs.Count - 1];
                 last.Text += token;
                 if (word.EndSeconds * 1000.0 > last.EndTime.TotalMilliseconds)
@@ -131,7 +133,7 @@ public static class Qwen3AsrWordSegmenter
 
     private static bool NeedsSpace(char previous, char next)
     {
-        if (char.IsWhiteSpace(previous) || NoSpaceBefore.IndexOf(next) >= 0)
+        if (char.IsWhiteSpace(previous) || NoSpaceBefore.IndexOf(next) >= 0 || NoSpaceAfter.IndexOf(previous) >= 0)
         {
             return false;
         }
@@ -157,6 +159,12 @@ public static class Qwen3AsrWordSegmenter
         }
 
         return i >= 0 && SentenceTerminators.IndexOf(token[i]) >= 0;
+    }
+
+    /// <summary>True when the token starts with a closing mark or a terminator, i.e. it attaches to what came before it.</summary>
+    private static bool ClosesText(string token)
+    {
+        return ClosingMarks.IndexOf(token[0]) >= 0 || NoSpaceBefore.IndexOf(token[0]) >= 0;
     }
 
     private static bool IsPunctuationOnly(string token)
