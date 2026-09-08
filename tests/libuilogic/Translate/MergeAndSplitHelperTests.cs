@@ -328,6 +328,59 @@ public class MergeAndSplitHelperTests
         }
     }
 
+    [Theory]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-HK")]
+    [InlineData("yue")]
+    [InlineData("ko")]
+    [InlineData("th")]
+    public void RebalanceLines_SkipsEveryCjkTargetCode(string code)
+    {
+        var previousMaxLines = Configuration.Settings.General.MaxNumberOfLines;
+        Configuration.Settings.General.MaxNumberOfLines = 2;
+        try
+        {
+            var input = "abc" + Environment.NewLine + "def" + Environment.NewLine + "ghi";
+            Assert.Equal(input, MergeAndSplitHelper.RebalanceLines(input, new TranslationPair("X", code)));
+        }
+        finally
+        {
+            Configuration.Settings.General.MaxNumberOfLines = previousMaxLines;
+        }
+    }
+
+    [Fact]
+    public void RebalanceLines_SkipsCjkTextWhateverTheCode()
+    {
+        var previousMaxLines = Configuration.Settings.General.MaxNumberOfLines;
+        Configuration.Settings.General.MaxNumberOfLines = 2;
+        try
+        {
+            var input = "你好世界" + Environment.NewLine + "我很好" + Environment.NewLine + "谢谢你";
+            Assert.Equal(input, MergeAndSplitHelper.RebalanceLines(input, new TranslationPair("Dutch", "nl")));
+        }
+        finally
+        {
+            Configuration.Settings.General.MaxNumberOfLines = previousMaxLines;
+        }
+    }
+
+    [Fact]
+    public void RebalanceLines_LeavesLyricsAlone()
+    {
+        var previousMaxLines = Configuration.Settings.General.MaxNumberOfLines;
+        Configuration.Settings.General.MaxNumberOfLines = 2;
+        try
+        {
+            var input = "♪ La la la ♪" + Environment.NewLine + "♪ La la ♪" + Environment.NewLine + "♪ La ♪";
+            Assert.Equal(input, MergeAndSplitHelper.RebalanceLines(input, new TranslationPair("French", "fr")));
+        }
+        finally
+        {
+            Configuration.Settings.General.MaxNumberOfLines = previousMaxLines;
+        }
+    }
+
     [Fact]
     public void RebalanceLines_SkipsCjkTargets()
     {

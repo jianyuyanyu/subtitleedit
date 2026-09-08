@@ -1,9 +1,11 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using Nikse.SubtitleEdit.UiLogic.AutoTranslate;
 using Nikse.SubtitleEdit.Core.Common;
+using Nikse.SubtitleEdit.Core.Common.TextLengthCalculator;
 using Nikse.SubtitleEdit.Core.Dictionaries;
 using Nikse.SubtitleEdit.Core.Settings;
 using Nikse.SubtitleEdit.UiLogic.Translate;
@@ -1290,7 +1292,14 @@ public static partial class MergeAndSplitHelper
     /// </summary>
     public static string RebalanceLines(string text, TranslationPair target)
     {
-        if (string.IsNullOrWhiteSpace(text) || IsNonMergeLanguage(target))
+        if (string.IsNullOrWhiteSpace(text) || IsNonMergeLanguage(target) || IsCjkTarget(target) || ContainsCjk(text))
+        {
+            return text;
+        }
+
+        // Lyrics keep one line per phrase; AutoBreakLine's own ♪ guard only fires on text that
+        // still holds line breaks, which the UnbreakLine below removes, so guard here.
+        if (text.IndexOf('♪') >= 0 || text.IndexOf('♫') >= 0)
         {
             return text;
         }
@@ -1306,6 +1315,38 @@ public static partial class MergeAndSplitHelper
         var language = target.TwoLetterIsoLanguageName ?? target.Code;
         var rebalanced = Utilities.AutoBreakLine(Utilities.UnbreakLine(text), language);
         return string.IsNullOrWhiteSpace(rebalanced) ? text : rebalanced;
+    }
+
+    /// <summary>
+    /// CJK targets by code: the engines emit many variants ("zh-Hans", "zh-HK", "yue", "kor",
+    /// "th") beyond the handful <see cref="IsNonMergeLanguage"/> knows, and re-breaking any of
+    /// them inserts ASCII spaces into text that has none.
+    /// </summary>
+    private static bool IsCjkTarget(TranslationPair language)
+    {
+        var code = (language.TwoLetterIsoLanguageName ?? language.Code ?? string.Empty).ToLowerInvariant();
+        return code.StartsWith("zh", StringComparison.Ordinal) ||
+               code.StartsWith("zho", StringComparison.Ordinal) ||
+               code.StartsWith("yue", StringComparison.Ordinal) ||
+               code.StartsWith("ja", StringComparison.Ordinal) ||
+               code.StartsWith("jpn", StringComparison.Ordinal) ||
+               code.StartsWith("ko", StringComparison.Ordinal) ||
+               code.StartsWith("kor", StringComparison.Ordinal) ||
+               code.StartsWith("th", StringComparison.Ordinal) ||
+               code.StartsWith("tha", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsCjk(string text)
+    {
+        foreach (var c in text)
+        {
+            if (CalcCjk.IsCjk(c))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsNonMergeLanguage(TranslationPair language)
