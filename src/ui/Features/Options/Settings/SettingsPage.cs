@@ -1330,7 +1330,7 @@ public class SettingsPage : UserControl
         textBox[!Control.IsEnabledProperty] = new Binding(nameof(_vm.ProxyUseDefaultCredentials))
         {
             Source = _vm,
-            Converter = new InverseBooleanConverter(),
+            Converter = InverseBooleanConverter.Instance,
         };
 
         return textBox;

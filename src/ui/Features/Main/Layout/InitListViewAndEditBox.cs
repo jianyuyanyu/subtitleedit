@@ -155,7 +155,7 @@ public static partial class InitListViewAndEditBox
         // the grid is rebuilt when settings are applied, so a changed mode takes effect then.
         var gridTextDisplayMode = SubtitleGridTextDisplayModeDisplay.FromSettings();
         var gapConverter = new DoubleToDisplayShortConverter();
-        var inverseBooleanConverter = new InverseBooleanConverter();
+        var inverseBooleanConverter = InverseBooleanConverter.Instance;
         var textOneLineShortConverter = new TextOneLineShortConverter();
         var booleanToGridLengthConverter = new BooleanToGridLengthConverter();
         var booleanAndConverter = BooleanAndConverter.Instance;

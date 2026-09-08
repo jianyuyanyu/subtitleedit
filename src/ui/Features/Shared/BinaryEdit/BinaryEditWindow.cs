@@ -422,7 +422,7 @@ public class BinaryEditWindow : Window
                     Command = vm.ToggleCurrentSubtitleWhilePlayingCommand,
                     [!MenuItem.IsVisibleProperty] = new Binding(nameof(vm.SelectCurrentSubtitleWhilePlaying))
                     {
-                        Converter = new InverseBooleanConverter(),
+                        Converter = InverseBooleanConverter.Instance,
                     },
                 },
             },

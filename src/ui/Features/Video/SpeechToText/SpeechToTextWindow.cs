@@ -635,7 +635,7 @@ public class SpeechToTextWindow : Window
             Source = vm,
             UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
         });
-        textBoxConsoleLog.WithBindIsVisible(nameof(vm.IsBatchMode), new InverseBooleanConverter());
+        textBoxConsoleLog.WithBindIsVisible(nameof(vm.IsBatchMode), InverseBooleanConverter.Instance);
         vm.TextBoxConsoleLogSingle = textBoxConsoleLog;
 
         return textBoxConsoleLog;
