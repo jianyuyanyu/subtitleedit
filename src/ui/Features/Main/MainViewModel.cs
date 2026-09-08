@@ -20806,6 +20806,7 @@ public partial class MainViewModel :
         {
             var preIndex = SelectedSubtitleIndex ?? 0;
             var preRowTop = GetSelectedRowViewportTop();
+            var preFocus = CaptureUndoRedoFocus();
 
             var undoRedoObject = _undoRedoManager.Undo()!;
             if (undoRedoObject?.Subtitles == null)
@@ -20814,7 +20815,8 @@ public partial class MainViewModel :
             }
 
             RestoreUndoRedoState(undoRedoObject, scrollToSelected: false);
-            RestoreSelectionToPreviousIndex(preIndex, preRowTop);
+            RestoreSelectionToPreviousIndex(preIndex, preRowTop, restoreGridFocus: preFocus == UndoRedoFocus.Grid);
+            RestoreUndoRedoFocus(preFocus);
             ShowUndoStatus();
         });
     }
@@ -20854,6 +20856,7 @@ public partial class MainViewModel :
         {
             var preIndex = SelectedSubtitleIndex ?? 0;
             var preRowTop = GetSelectedRowViewportTop();
+            var preFocus = CaptureUndoRedoFocus();
 
             var undoRedoObject = _undoRedoManager.Redo();
             if (undoRedoObject?.Subtitles == null)
@@ -20862,7 +20865,8 @@ public partial class MainViewModel :
             }
 
             RestoreUndoRedoState(undoRedoObject, scrollToSelected: false);
-            RestoreSelectionToPreviousIndex(preIndex, preRowTop);
+            RestoreSelectionToPreviousIndex(preIndex, preRowTop, restoreGridFocus: preFocus == UndoRedoFocus.Grid);
+            RestoreUndoRedoFocus(preFocus);
             ShowRedoStatus();
         });
     }
@@ -20890,14 +20894,64 @@ public partial class MainViewModel :
     /// the current line at the top of the grid on every Undo - disorienting when the user was
     /// working near the bottom of the view (#14517).
     /// </summary>
-    private void RestoreSelectionToPreviousIndex(int preIndex, double? preRowTop = null)
+    private enum UndoRedoFocus
+    {
+        Grid,
+        EditTextBox,
+        EditTextBoxOriginal,
+        AudioVisualizer,
+    }
+
+    /// <summary>
+    /// Which control should get focus back after undo/redo reloads the rows. Capture this
+    /// before the reload: rebuilding the grid drops focus synchronously. Nothing focused
+    /// (window root, layout host) counts as the grid, matching
+    /// <see cref="IsSubtitleGridFocusedOrFocusDropped"/>.
+    /// </summary>
+    private UndoRedoFocus CaptureUndoRedoFocus()
+    {
+        if (EditTextBox.IsFocused)
+        {
+            return UndoRedoFocus.EditTextBox;
+        }
+
+        if (EditTextBoxOriginal.IsFocused)
+        {
+            return UndoRedoFocus.EditTextBoxOriginal;
+        }
+
+        if (AudioVisualizer is { IsFocused: true })
+        {
+            return UndoRedoFocus.AudioVisualizer;
+        }
+
+        return UndoRedoFocus.Grid;
+    }
+
+    private void RestoreUndoRedoFocus(UndoRedoFocus focus)
+    {
+        switch (focus)
+        {
+            case UndoRedoFocus.EditTextBox:
+                Dispatcher.UIThread.Post(() => EditTextBox.Focus());
+                break;
+            case UndoRedoFocus.EditTextBoxOriginal:
+                Dispatcher.UIThread.Post(() => EditTextBoxOriginal.Focus());
+                break;
+            case UndoRedoFocus.AudioVisualizer:
+                Dispatcher.UIThread.Post(() => AudioVisualizer?.Focus());
+                break;
+        }
+    }
+
+    private void RestoreSelectionToPreviousIndex(int preIndex, double? preRowTop = null, bool? restoreGridFocus = null)
     {
         if (Subtitles.Count == 0)
         {
             return;
         }
 
-        SelectAndScrollToRow(Math.Clamp(preIndex, 0, Subtitles.Count - 1), null, keepRowViewportTop: preRowTop);
+        SelectAndScrollToRow(Math.Clamp(preIndex, 0, Subtitles.Count - 1), null, restoreGridFocus: restoreGridFocus, keepRowViewportTop: preRowTop);
     }
 
     public UndoRedoItem MakeUndoRedoObject(string description)
