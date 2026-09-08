@@ -26541,6 +26541,9 @@ public partial class MainViewModel :
         if (AudioVisualizer != null)
         {
             AudioVisualizer.WavePeaks = null;
+            // Disposes the previous video's SKBitmap tiles - otherwise they stay resident (and get
+            // drawn against the next timeline) until a video that has its own spectrogram loads.
+            AudioVisualizer.SetSpectrogram(null);
             AudioVisualizer.ShotChanges = new List<double>();
             AudioVisualizer.Chapters = new List<WaveformChapter>();
             AudioVisualizer.StartPositionSeconds = 0;
@@ -29748,13 +29751,28 @@ public partial class MainViewModel :
             _referenceMappingDirty = true;
         }
 
-        if (e.NewItems != null)
-            foreach (SubtitleLineViewModel item in e.NewItems)
-                item.PropertyChanged += OnSubtitleItemChangedForMpv;
+        // Subtitles.Clear() raises Reset with no OldItems, and the bulk paths (sort, delete, merge,
+        // undo/redo, ReplaceSubtitles) then re-add the same row instances - so unhook via the
+        // tracked set on Reset and never subscribe a row twice, or every pass stacks one more
+        // delegate on each surviving row and the handler runs N times per time-code change.
+        if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+        {
+            foreach (var item in _mpvSubscribedRows)
+                item.PropertyChanged -= OnSubtitleItemChangedForMpv;
+            _mpvSubscribedRows.Clear();
+        }
+
         if (e.OldItems != null)
             foreach (SubtitleLineViewModel item in e.OldItems)
-                item.PropertyChanged -= OnSubtitleItemChangedForMpv;
+                if (_mpvSubscribedRows.Remove(item))
+                    item.PropertyChanged -= OnSubtitleItemChangedForMpv;
+        if (e.NewItems != null)
+            foreach (SubtitleLineViewModel item in e.NewItems)
+                if (_mpvSubscribedRows.Add(item))
+                    item.PropertyChanged += OnSubtitleItemChangedForMpv;
     }
+
+    private readonly HashSet<SubtitleLineViewModel> _mpvSubscribedRows = new(ReferenceEqualityComparer.Instance);
 
     private void OnSubtitleItemChangedForMpv(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -30225,7 +30243,8 @@ public partial class MainViewModel :
     {
         Subtitles.CollectionChanged += OnSubtitlesCollectionChangedForMpv;
         foreach (var item in Subtitles)
-            item.PropertyChanged += OnSubtitleItemChangedForMpv;
+            if (_mpvSubscribedRows.Add(item))
+                item.PropertyChanged += OnSubtitleItemChangedForMpv;
         _positionTimer = new UiTickPump(TimeSpan.FromMilliseconds(50));
         _positionTimer.Tick += (s, e) =>
         {
@@ -30622,6 +30641,18 @@ public partial class MainViewModel :
         _cursorTimer?.Stop();
         _slowTimer.Stop();
         _undoRedoManager.StopChangeDetection();
+
+        // The auto-backup DispatcherTimer closes over this view model; left running it roots a
+        // closed "New window" editor (grid, rows, waveform, player wrapper) for the rest of the
+        // process and keeps calling HasChanges() on it.
+        _autoBackupService.StopAutobackup();
+
+        // Static slot assigned in the constructor - only the most recent window is registered,
+        // so clear it when that window goes so the dead view model is not pinned.
+        if (UiTheme.SystemThemeChangedCallback == OnSystemThemeChanged)
+        {
+            UiTheme.SystemThemeChangedCallback = null;
+        }
     }
 
     // Preview settle window after the last keystroke. Deliberately shorter than

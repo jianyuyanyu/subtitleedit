@@ -1593,7 +1593,7 @@ public partial class TransparentSubtitlesViewModel : ObservableObject
 
         try
         {
-            VideoPlayerControl?.Close();
+            VideoPlayerControl?.CloseAndDisposePlayer();
         }
         catch
         {

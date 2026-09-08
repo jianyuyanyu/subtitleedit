@@ -2713,7 +2713,7 @@ public partial class BurnInViewModel : ObservableObject
 
         try
         {
-            VideoPlayerControl?.Close();
+            VideoPlayerControl?.CloseAndDisposePlayer();
         }
         catch
         {
