@@ -16539,6 +16539,7 @@ public partial class MainViewModel :
                 IsRightToLeftEnabled = Se.Settings.Appearance.RightToLeft;
                 RightToLeftHelper.SetRightToLeftForDataGridAndText(Window);
                 RightToLeftHelper.RefreshDataGridBindings(SubtitleGrid, Subtitles, SelectedSubtitle);
+                RefreshVideoPreviewAfterRightToLeftChange();
                 return;
             }
 
@@ -16567,9 +16568,38 @@ public partial class MainViewModel :
             Window.Width += 0.1;
             Task.Delay(50);
             Window.Width -= 0.1;
+
+            RefreshVideoPreviewAfterRightToLeftChange();
         });
 
         _shortcutManager.ClearKeys();
+    }
+
+    /// <summary>
+    /// Re-pushes the subtitle to the video player after the right-to-left mode changed.
+    /// The RTL unicode fix is applied inside the preview reloaders, but their change memo
+    /// is keyed on the subtitle text, which a settings flip does not touch - so without a
+    /// reset the next refresh reuses the old serialized text and the video keeps showing the
+    /// previous direction until the app is restarted (issue #14695).
+    /// </summary>
+    private void RefreshVideoPreviewAfterRightToLeftChange()
+    {
+        var vp = GetVideoPlayerControl();
+        if (vp == null)
+        {
+            return;
+        }
+
+        if (vp.VideoPlayer is LibMpvDynamicPlayer mpv)
+        {
+            _mpvReloader.Reset();
+            _ = RunPreviewRefresh(() => _mpvReloader.RefreshMpv(mpv, GetVideoPreviewSubtitle(), _subtitleSecondary, SelectedSubtitleFormat));
+        }
+        else if (vp.VideoPlayer is LibVlcDynamicPlayer vlc)
+        {
+            _vlcReloader.Reset();
+            _vlcReloader.RefreshVlc(vlc, GetVideoPreviewSubtitle(), _subtitleSecondary, SelectedSubtitleFormat);
+        }
     }
 
     /// <summary>
