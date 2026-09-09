@@ -13020,6 +13020,11 @@ public partial class MainViewModel :
             AudioVisualizer.ShowOriginalSubtitleOverlay = Se.Settings.Waveform.ShowOriginalSubtitle;
             AudioVisualizer.ResetCache();
 
+            // Purely visual waveform settings (paragraph footer toggles, fonts, colors) are read
+            // straight from Se.Settings while drawing, and none of them is an AffectsRender
+            // property, so ask for a repaint instead of waiting for the next selection change.
+            AudioVisualizer.InvalidateVisual();
+
             InitializeLibMpv();
             InitializeFfmpeg();
             LoadShortcuts();
