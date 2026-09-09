@@ -3,6 +3,34 @@ Subtitle Edit Changelog
 
 -----------------------------------------------------------------------------------------------------
 
+v5.2.0-rc7 (9th of September 2026)
+
+* Add CANVASs SSTG1 (.sdb) subtitle import - thx magsmike
+* Add opt-in setting to let shortcuts fire on Ctrl+Left/Right and Home/End in a text box - thx kadrimarzouki
+* Merge short lines: add an "Apply" checkbox column to pick which lines to merge - thx ghostminhtoan
+* Auto-translate: re-break translated rows that break the line profile - thx ruudhaf02-lgtm
+* Fix SCC import timing - apply control codes at their frame within the line - thx magsmike
+* Fix grid paste overlapping the selected line in time - thx rosilucia-hub
+* Fix Blu-ray sup save from the binary editor dropping the first line and duplicating the last - thx Lukewarm1141
+* Fix video preview not refreshing when right-to-left mode is toggled - thx kadrimarzouki
+* Fix repeated shortcuts while holding modifiers, and restore focus after undo/redo - thx ghostminhtoan
+* Export image: right/center justify Arabic lines precisely - thx kadrimarzouki
+* OCR: keep a row selected after deleting lines - thx FLAV1N
+* OCR fix engine: apostrophe straightening honors "use hardcoded rules"
+* Tesseract OCR: match retry-merge unknown words whole, not as substrings
+* Qwen3 ASR CPP: opening quotes and dialog dashes start the next cue
+* Waveform original overlay: keep a long cue overlapped by a shorter one visible
+* seconv: don't parse input paths in the parameter table as markup - thx TWiStErRob
+* Add Azerbaijani translation - thx jamalkamaladdin
+* Update German translation - thx FunkyKnilch
+* Update Italian translation - thx bovirus
+* Update Japanese translation - thx hisui3393
+* Update Korean translation - thx 12si27/sinfancy
+* Update Portuguese (Brazil) translation - thx igorruckert
+* Update Turkish translation - thx bilimiyorum
+
+-----------------------------------------------------------------------------------------------------
+
 v5.2.0-rc6 (8th of September 2026)
 
 * Add option to show the original subtitle on the waveform - thx pdjdev
