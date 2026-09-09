@@ -7,6 +7,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -473,6 +474,53 @@ public static class UiUtil
         var accessChar = text[idx + 1];
         var display = text.Remove(idx, 1);
         return TryGetAccessKey(accessChar, out var key) ? (display, key) : (display, null);
+    }
+
+    /// <summary>
+    /// WinForms fired a button mnemonic on the bare letter whenever the focused control did not
+    /// consume text, so SE4 users clicked "Find" once and then tapped F / R / A with the focus
+    /// resting on the buttons (discussion #14716). Mirror that: with no modifier held and focus
+    /// outside any text input, a key matching a button's Alt access key runs that button.
+    /// Returns true when a button was invoked.
+    /// </summary>
+    internal static bool TryInvokeBareAccessKey(Window? window, KeyEventArgs e)
+    {
+        if (window == null || e.Handled || e.KeyModifiers != KeyModifiers.None)
+        {
+            return false;
+        }
+
+        var focused = TopLevel.GetTopLevel(window)?.FocusManager?.GetFocusedElement();
+        if (focused is TextBox || focused is AutoCompleteBox || focused is ComboBox { IsEditable: true })
+        {
+            return false;
+        }
+
+        foreach (var button in window.GetLogicalDescendants().OfType<Button>())
+        {
+            if (button.HotKey is not { KeyModifiers: KeyModifiers.Alt } gesture || gesture.Key != e.Key)
+            {
+                continue;
+            }
+
+            if (!button.IsEffectivelyEnabled || !button.IsEffectivelyVisible)
+            {
+                return false;
+            }
+
+            var parameter = button.CommandParameter;
+            if (button.Command?.CanExecute(parameter) != true)
+            {
+                return false;
+            }
+
+            e.Handled = true;
+            button.Focus();
+            button.Command.Execute(parameter);
+            return true;
+        }
+
+        return false;
     }
 
     private static bool TryGetAccessKey(char c, out Key key)

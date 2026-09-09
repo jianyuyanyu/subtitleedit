@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 using Nikse.SubtitleEdit.Features.Edit.Replace;
 using Nikse.SubtitleEdit.Logic;
@@ -103,5 +104,117 @@ public class ReplaceWindowAccessKeyTests
     {
         var button = UiUtil.MakeButton("Count", new RelayCommand(() => { }));
         Assert.Equal("Count", button.Content);
+    }
+}
+
+/// <summary>
+/// SE4 fired the mnemonics on the bare letter once focus rested on a button (WinForms processed
+/// mnemonics for any control that did not consume text). Discussion #14716 asked for that back:
+/// click Find once, then tap F / R / A with two fingers. Typing in the find box must stay typing.
+/// </summary>
+public class ReplaceWindowBareAccessKeyTests
+{
+    private static (ReplaceViewModel Vm, ReplaceWindow Window) Open()
+    {
+        var vm = new ReplaceViewModel();
+        vm.RefreshSubtitles(["Hello world"]);
+        var window = new ReplaceWindow(vm);
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        return (vm, window);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(PhysicalKey.F, nameof(ReplaceViewModel.FindNextPressed))]
+    [InlineData(PhysicalKey.R, nameof(ReplaceViewModel.ReplacePressed))]
+    [InlineData(PhysicalKey.A, nameof(ReplaceViewModel.ReplaceAllPressed))]
+    public void BareLetter_FiresCommand_WhenFocusIsOnAButton(PhysicalKey key, string flag)
+    {
+        var (vm, window) = Open();
+        try
+        {
+            var findButton = window.GetLogicalDescendants().OfType<Button>()
+                .First(b => b.HotKey?.Key == Key.F);
+            findButton.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(findButton.IsFocused);
+
+            window.KeyPressQwerty(key, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True((bool)typeof(ReplaceViewModel).GetProperty(flag)!.GetValue(vm)!);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void BareLetter_MovesFocusToTheInvokedButton()
+    {
+        var (_, window) = Open();
+        try
+        {
+            var buttons = window.GetLogicalDescendants().OfType<Button>().ToList();
+            buttons.First(b => b.HotKey?.Key == Key.F).Focus();
+            Dispatcher.UIThread.RunJobs();
+
+            window.KeyPressQwerty(PhysicalKey.R, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(buttons.First(b => b.HotKey?.Key == Key.R).IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(0)] // find box
+    [InlineData(1)] // replace box
+    public void BareLetter_StaysTyping_WhileATextBoxHasFocus(int textBoxIndex)
+    {
+        var (vm, window) = Open();
+        try
+        {
+            // The find box is an AutoCompleteBox whose TextBox lives in the visual tree only.
+            var textBox = window.GetVisualDescendants().OfType<TextBox>().ElementAt(textBoxIndex);
+            textBox.Focus();
+            Dispatcher.UIThread.RunJobs();
+
+            window.KeyPressQwerty(PhysicalKey.R, RawInputModifiers.None);
+            window.KeyTextInput("r");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.False(vm.ReplacePressed);
+            Assert.Equal("r", textBox.Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void BareLetter_IsIgnored_WhenFocusIsOnARadioButton_ButtonStillRuns()
+    {
+        // Any non-text control counts as "not typing" - a radio button, like in WinForms.
+        var (vm, window) = Open();
+        try
+        {
+            window.GetLogicalDescendants().OfType<RadioButton>().First().Focus();
+            Dispatcher.UIThread.RunJobs();
+
+            window.KeyPressQwerty(PhysicalKey.F, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(vm.FindNextPressed);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 }
