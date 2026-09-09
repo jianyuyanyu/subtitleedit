@@ -2372,39 +2372,34 @@ public partial class OcrViewModel : ObservableObject
             return;
         }
 
-        var selectedIndices = new List<int>();
-        foreach (var selectedItem in selectedItems)
+        var itemsToRemove = selectedItems
+            .OfType<OcrSubtitleItem>()
+            .Where(item => OcrSubtitleItems.Contains(item))
+            .ToList();
+        if (itemsToRemove.Count == 0)
         {
-            if (selectedItem is OcrSubtitleItem item)
-            {
-                var idx = OcrSubtitleItems.IndexOf(item);
-                if (idx >= 0)
-                {
-                    selectedIndices.Add(idx);
-
-                    var remov = UnknownWords.Where(uw => uw.Item == item).ToList();
-                    foreach (var unknownWord in remov)
-                    {
-                        UnknownWords.Remove(unknownWord);
-                    }
-                }
-            }
+            return;
         }
 
-        var itemsToRemove = selectedIndices
-            .Select(idx => OcrSubtitleItems[idx])
-            .ToList();
+        // Removing the focused row's container drops keyboard focus to null synchronously,
+        // so decide whether the grid should get it back before anything is removed.
+        var gridHadFocus = IsSubtitleGridFocusedOrFocusDropped();
+        var survivor = PickRowToSelectAfterRemoval(itemsToRemove);
+
+        // Hand the selection to the survivor before the rows go (#14708). Removing the selected
+        // rows first emptied the selection, which the TwoWay SelectedItem binding wrote back as
+        // null - the row highlight vanished and the grid scrolled to wherever its own fallback
+        // landed. With the survivor already the single selected row, the selection never empties.
+        if (survivor != null)
+        {
+            SubtitleGrid.SelectedItem = survivor;
+        }
 
         foreach (var item in itemsToRemove)
         {
             OcrSubtitleItems.Remove(item);
             _allOcrSubtitleItems.Remove(item);
         }
-
-        //foreach (var index in selectedIndices.OrderByDescending(p => p))
-        //{
-        //    _ocrSubtitle?.Delete(index);
-        //}
 
         Renumber();
 
@@ -2421,6 +2416,81 @@ public partial class OcrViewModel : ObservableObject
         {
             UnknownWords.Remove(item);
         }
+
+        if (survivor != null)
+        {
+            SelectedOcrSubtitleItem = survivor;
+            SubtitleGrid.SelectedItem = survivor;
+            SelectAndScrollToRow(OcrSubtitleItems.IndexOf(survivor));
+        }
+        else
+        {
+            SelectedOcrSubtitleItem = null;
+            SubtitleGrid.SelectedItem = null;
+        }
+
+        if (gridHadFocus)
+        {
+            Dispatcher.UIThread.Post(() => TableViewExtras.FocusRow(SubtitleGrid), DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>
+    /// The row that becomes current once <paramref name="rowsToRemove"/> are gone: the first
+    /// surviving row below the first removed one (the line that visually takes its place),
+    /// else the last surviving row above it. Null when nothing is left to select.
+    /// </summary>
+    private OcrSubtitleItem? PickRowToSelectAfterRemoval(IReadOnlyCollection<OcrSubtitleItem> rowsToRemove)
+    {
+        var removeSet = new HashSet<OcrSubtitleItem>(rowsToRemove);
+
+        var firstIndex = -1;
+        for (var i = 0; i < OcrSubtitleItems.Count; i++)
+        {
+            if (removeSet.Contains(OcrSubtitleItems[i]))
+            {
+                firstIndex = i;
+                break;
+            }
+        }
+
+        if (firstIndex < 0)
+        {
+            return null;
+        }
+
+        for (var i = firstIndex + 1; i < OcrSubtitleItems.Count; i++)
+        {
+            if (!removeSet.Contains(OcrSubtitleItems[i]))
+            {
+                return OcrSubtitleItems[i];
+            }
+        }
+
+        for (var i = firstIndex - 1; i >= 0; i--)
+        {
+            if (!removeSet.Contains(OcrSubtitleItems[i]))
+            {
+                return OcrSubtitleItems[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// True when keyboard focus is on the subtitle grid (or one of its rows), or on nothing
+    /// in particular (the window root), which is where focus lands after a row removal.
+    /// </summary>
+    private bool IsSubtitleGridFocusedOrFocusDropped()
+    {
+        var focused = Window?.FocusManager?.GetFocusedElement();
+        if (focused == null || ReferenceEquals(focused, Window))
+        {
+            return true;
+        }
+
+        return SubtitleGrid.IsFocused || SubtitleGrid.IsKeyboardFocusWithin;
     }
 
     private void Renumber()
